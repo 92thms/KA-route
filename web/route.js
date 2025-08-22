@@ -147,6 +147,63 @@ function addListingToClusters(lat, lon, itemHtml, titleForPopup="Anzeigen in der
   }
 }
 
+// ---- Route-Index & Distanzberechnung ----
+async function loadRBush(){
+  if(window.RBush) return window.RBush;
+  await new Promise((res,rej)=>{
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/rbush@3.0.1/rbush.min.js';
+    s.onload=res; s.onerror=rej; document.head.appendChild(s);
+  });
+  return window.RBush;
+}
+function toXY(lat,lon){
+  return [lon*111320*Math.cos(lat*Math.PI/180), lat*110540];
+}
+function distPointSegMeters(lat, lon, seg){
+  const [x,y]=toXY(lat,lon);
+  const [x1,y1]=toXY(seg.lat1, seg.lon1);
+  const [x2,y2]=toXY(seg.lat2, seg.lon2);
+  const A=x-x1,B=y-y1,C=x2-x1,D=y2-y1;
+  const dot=A*C+B*D;
+  const len_sq=C*C+D*D;
+  let param=-1;
+  if(len_sq!==0) param=dot/len_sq;
+  let xx,yy;
+  if(param<0){xx=x1;yy=y1;} else if(param>1){xx=x2;yy=y2;} else {xx=x1+param*C;yy=y1+param*D;}
+  const dx=x-xx, dy=y-yy;
+  return Math.sqrt(dx*dx+dy*dy);
+}
+async function buildRouteIndex(coords){
+  const RBush=await loadRBush();
+  const tree=new RBush();
+  const segs=[];
+  for(let i=1;i<coords.length;i++){
+    const [lon1,lat1]=coords[i-1];
+    const [lon2,lat2]=coords[i];
+    segs.push({
+      minX:Math.min(lon1,lon2),
+      minY:Math.min(lat1,lat2),
+      maxX:Math.max(lon1,lon2),
+      maxY:Math.max(lat1,lat2),
+      lon1,lat1,lon2,lat2
+    });
+  }
+  tree.load(segs);
+  return {
+    distance(lat,lon){
+      const ddeg=0.2; // ~20km Suchfenster
+      const near=tree.search({minX:lon-ddeg,minY:lat-ddeg,maxX:lon+ddeg,maxY:lat+ddeg});
+      let min=Infinity;
+      for(const seg of near){
+        const d=distPointSegMeters(lat,lon,seg);
+        if(d<min) min=d;
+      }
+      return min;
+    }
+  };
+}
+
 // -------- Proxy fetch --------
 async function fetchViaProxy(url){
   const prox=`/proxy?u=${url}`;
@@ -381,64 +438,88 @@ catch(e){
       return out;
     }
     const samples=sampleEveryMeters(coords,stepKm*1000);
-
+    const routeIdx=await buildRouteIndex(coords);
+    const plzCache=new Map();
+    const inserateCache=new Map();
     let done=0; const seen=new Set();
-    for(const [lonS,latS] of samples){
-      if(!running) break; done++;
-setProgress(Math.round(done/samples.length*100));
+    const DETAIL_LIMIT=10, DETAIL_PAR=4, WORKERS=4;
+    let nextIndex=0;
 
-      // Reverse → PLZ
-      let plz=null;
-      try{
-        const r=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latS}&lon=${lonS}&format=jsonv2&zoom=10&addressdetails=1`,{headers:NOMINATIM_HEADERS});
-        const j=await r.json(); plz=j?.address?.postcode||null;
-      }catch(_){}
-      if(!plz) continue;
+    function progressIncrement(){
+      done++; setProgress(Math.round(done/samples.length*100));
+    }
 
-      // Inserate
-      let items=[];
-      try{
-        const j = await fetchApiInserate(q, plz, rKm);
-        items = j?.data || [];
-      }catch(e){
-        setStatus(`API-Netzwerkfehler für PLZ ${plz}: ${e.message}`, true);
+    async function processSample(idx){
+      const [lonS,latS]=samples[idx];
+      const key=latS.toFixed(3)+"|"+lonS.toFixed(3);
+      let plz=plzCache.get(key);
+      if(!plz){
+        try{
+          const r=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latS}&lon=${lonS}&format=jsonv2&zoom=10&addressdetails=1`,{headers:NOMINATIM_HEADERS});
+          const j=await r.json(); plz=j?.address?.postcode||null;
+        }catch(_){}
+        plzCache.set(key,plz);
+      }
+      if(!plz){ progressIncrement(); return; }
+
+      let items=inserateCache.get(plz);
+      if(!items){
+        try{
+          const j=await fetchApiInserate(q,plz,rKm);
+          items=j?.data||[];
+          inserateCache.set(plz,items);
+        }catch(e){
+          setStatus(`API-Netzwerkfehler für PLZ ${plz}: ${e.message}`,true);
+          items=[];
+        }
       }
       setStatus(`PLZ ${plz}: ${items.length} Treffer`);
 
+      const fresh=[];
       for(const it of items){
         if(seen.has(it.url)) continue; seen.add(it.url);
-        let enrich={}; try{ enrich=await enrichListing(it,true);}catch(_){}
-        if(!enrich.lat||!enrich.lon) continue;
+        fresh.push(it);
+        if(fresh.length>=DETAIL_LIMIT) break;
+      }
 
-        // Filter: max 10km Luftlinie zu Route
-        let minDist = Infinity;
-        for(const [lon,lat] of samples){
-          const d = haversine(lat,lon,enrich.lat,enrich.lon);
-          if(d < minDist) minDist = d;
-          if(minDist <= 10000) break;
-        }
-        if(minDist>10000) continue;
-        totalFound++;
-
-        const loc=enrich.label||plz||"?";
-        const price=enrich.price;
-        // Card-HTML für Galerie
-        const cardHtml = `
+      for(let i=0;i<fresh.length;i+=DETAIL_PAR){
+        const chunk=fresh.slice(i,i+DETAIL_PAR);
+        const results=await Promise.allSettled(chunk.map(it=>enrichListing(it,true)));
+        results.forEach((res,idx)=>{
+          if(res.status!=="fulfilled") return;
+          const enrich=res.value;
+          if(!enrich.lat||!enrich.lon) return;
+          const minDist=routeIdx.distance(enrich.lat,enrich.lon);
+          if(minDist>10000) return;
+          totalFound++;
+          const it=chunk[idx];
+          const loc=enrich.label||plz||"?";
+          const price=enrich.price;
+          const cardHtml=`
           <a href="${escapeHtml(it.url)}" target="_blank" rel="noopener">
             ${enrich.image?`<img src="${escapeHtml(enrich.image)}" alt="">`:''}
             <strong>${escapeHtml(it.title)}</strong>
           </a>
           <div class="muted">${escapeHtml(price)}</div>
         `;
+          addResultGalleryGroup(loc, cardHtml);
+          const popupHtml=`<a href="${escapeHtml(it.url)}" target="_blank"><strong>${escapeHtml(it.title)}</strong></a><br>${escapeHtml(price)}<br>${escapeHtml(loc)}${enrich.image?`<br><img src="${escapeHtml(enrich.image)}" style="max-width:180px;border-radius:8px">`:''}`;
+          addListingToClusters(enrich.lat,enrich.lon,popupHtml,"Anzeigen in der Nähe");
+        });
+      }
 
-        // Ergebnisliste (Galerie-Gruppen)
-        addResultGalleryGroup(loc, cardHtml);
+      progressIncrement();
+    }
 
-        // Marker-Popup (Liste)
-        const popupHtml = `<a href="${escapeHtml(it.url)}" target="_blank"><strong>${escapeHtml(it.title)}</strong></a><br>${escapeHtml(price)}<br>${escapeHtml(loc)}${enrich.image?`<br><img src="${escapeHtml(enrich.image)}" style="max-width:180px;border-radius:8px">`:''}`;
-        addListingToClusters(enrich.lat, enrich.lon, popupHtml, "Anzeigen in der Nähe");
+    async function worker(){
+      while(running){
+        const idx=nextIndex++;
+        if(idx>=samples.length) break;
+        await processSample(idx);
       }
     }
+
+    await Promise.all(Array.from({length:WORKERS},()=>worker()));
 setStatus("Fertig.");
 setProgress(100);
 setProgressState("done", `Fertig – ${totalFound} Inserate`);
