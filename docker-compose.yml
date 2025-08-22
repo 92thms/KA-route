@@ -1,0 +1,11 @@
+services:
+  kleinanzeigen_suite:
+    build:
+      context: .              # <— Projekt-Root als Kontext
+      dockerfile: ops/Dockerfile
+    container_name: kleinanzeigen_suite
+    ports:
+      - "8401:80"
+    restart: unless-stopped
+    shm_size: "1g"
+    ipc: host
