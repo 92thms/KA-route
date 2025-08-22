@@ -85,16 +85,31 @@ function addResultGalleryGroup(loc, cardHtml){
 // -------- Debounce & Autocomplete (auf DE beschränkt) --------
 function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};}
 async function geocodeSuggest(q){
-  // Show suggestions as early as possible; Nominatim happily accepts
-  // two-character queries, so we only guard against empty strings.
+  // Show suggestions as early as possible; we only guard against
+  // empty strings. When an ORS API key is available we use the
+  // Elasticsearch based geocoder which provides fuzzy matches.
   if(!q||q.length<2) return [];
   if(geocodeCache.has(q)) return geocodeCache.get(q);
-  const url=`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&countrycodes=de&q=${encodeURIComponent(q)}`;
-  const res=await fetch(url,{headers:NOMINATIM_HEADERS});
-  if(!res.ok) throw new Error("Nominatim Suggest HTTP "+res.status);
-  const data=await res.json();
-  geocodeCache.set(q, data);
-  return data;
+
+  let items;
+  if(ORS_APIKEY){
+    const url=`https://api.openrouteservice.org/geocode/autocomplete?api_key=${encodeURIComponent(ORS_APIKEY)}&text=${encodeURIComponent(q)}&boundary.country=DE&size=5`;
+    const res=await fetch(url,{headers:{"Accept":"application/json"}});
+    if(!res.ok) throw new Error("ORS Suggest HTTP "+res.status);
+    const data=await res.json();
+    items=data.features.map(f=>({
+      display_name:f.properties.label,
+      lat:f.geometry.coordinates[1],
+      lon:f.geometry.coordinates[0]
+    }));
+  }else{
+    const url=`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&countrycodes=de&q=${encodeURIComponent(q)}`;
+    const res=await fetch(url,{headers:NOMINATIM_HEADERS});
+    if(!res.ok) throw new Error("Nominatim Suggest HTTP "+res.status);
+    items=await res.json();
+  }
+  geocodeCache.set(q, items);
+  return items;
 }
 function bindSuggest(inputSel,listSel){
   const input=$(inputSel), list=$(listSel);
