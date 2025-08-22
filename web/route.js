@@ -5,6 +5,7 @@ const ORS_APIKEY = CONFIG.ORS_API_KEY || "";
 const rKm = Number(CONFIG.SEARCH_RADIUS_KM) || 10;
 const stepKm = Number(CONFIG.STEP_KM) || 50;
 const NOMINATIM_HEADERS = { "Accept":"application/json", "Accept-Language":"de" };
+const geocodeCache = new Map();
 
 function escapeHtml(str){
   return String(str).replace(/[&<>"']/g, s => ({
@@ -70,10 +71,12 @@ function addResultGalleryGroup(loc, cardHtml){
   }
   const box=ensureGroup(loc);
   const gallery=box.querySelector('.gallery');
+  const frag=document.createDocumentFragment();
   const item=document.createElement('div');
   item.className='gallery-item';
   item.innerHTML=cardHtml;
-  gallery.appendChild(item);
+  frag.appendChild(item);
+  gallery.appendChild(frag);
   const badge=box.querySelector('.badge');
   badge.textContent=String(Number(badge.textContent)+1);
 }
@@ -82,10 +85,13 @@ function addResultGalleryGroup(loc, cardHtml){
 function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};}
 async function geocodeSuggest(q){
   if(!q||q.length<3) return [];
+  if(geocodeCache.has(q)) return geocodeCache.get(q);
   const url=`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&countrycodes=de&q=${encodeURIComponent(q)}`;
   const res=await fetch(url,{headers:NOMINATIM_HEADERS});
   if(!res.ok) throw new Error("Nominatim Suggest HTTP "+res.status);
-  return res.json();
+  const data=await res.json();
+  geocodeCache.set(q, data);
+  return data;
 }
 function bindSuggest(inputSel,listSel){
   const input=$(inputSel), list=$(listSel);
