@@ -1,8 +1,20 @@
+"use strict";
+
 const CONFIG = window.CONFIG || {};
 const ORS_APIKEY = CONFIG.ORS_API_KEY || "";
 const rKm = Number(CONFIG.SEARCH_RADIUS_KM) || 10;
 const stepKm = Number(CONFIG.STEP_KM) || 50;
 const NOMINATIM_HEADERS = { "Accept":"application/json", "Accept-Language":"de" };
+
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, s => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[s]));
+}
 
 // Map
 const map = L.map('map').setView([48.7, 9.18], 7);
@@ -38,7 +50,7 @@ function ensureGroup(loc){
   if(groups.has(key)) return groups.get(key);
   const wrap=document.createElement('details');
   wrap.className='groupbox'; wrap.open=false;
-  wrap.innerHTML=`<summary>${key} <span class="badge" data-count="0">0</span></summary><div class="gbody"><div class="gallery"></div></div>`;
+  wrap.innerHTML=`<summary>${escapeHtml(key)} <span class="badge" data-count="0">0</span></summary><div class="gbody"><div class="gallery"></div></div>`;
   $("#results").appendChild(wrap);
   groups.set(key, wrap);
   return wrap;
@@ -79,7 +91,7 @@ function bindSuggest(inputSel,listSel){
   const input=$(inputSel), list=$(listSel);
   const render=items=>{
     if(!items.length){list.hidden=true;list.innerHTML="";return;}
-    list.innerHTML=items.map(i=>`<li data-lat="${i.lat}" data-lon="${i.lon}">${i.display_name}</li>`).join("");
+    list.innerHTML=items.map(i=>`<li data-lat="${Number(i.lat)}" data-lon="${Number(i.lon)}">${escapeHtml(i.display_name)}</li>`).join("");
     list.hidden=false;
   };
   const onPick=li=>{
@@ -412,18 +424,18 @@ setProgress(Math.round(done/samples.length*100));
         const price=enrich.price;
         // Card-HTML für Galerie
         const cardHtml = `
-          <a href="${it.url}" target="_blank" rel="noopener">
-            ${enrich.image?`<img src="${enrich.image}" alt="">`:''}
-            <strong>${it.title}</strong>
+          <a href="${escapeHtml(it.url)}" target="_blank" rel="noopener">
+            ${enrich.image?`<img src="${escapeHtml(enrich.image)}" alt="">`:''}
+            <strong>${escapeHtml(it.title)}</strong>
           </a>
-          <div class="muted">${price}</div>
+          <div class="muted">${escapeHtml(price)}</div>
         `;
 
         // Ergebnisliste (Galerie-Gruppen)
         addResultGalleryGroup(loc, cardHtml);
 
         // Marker-Popup (Liste)
-        const popupHtml = `<a href="${it.url}" target="_blank"><strong>${it.title}</strong></a><br>${price}<br>${loc}${enrich.image?`<br><img src="${enrich.image}" style="max-width:180px;border-radius:8px">`:''}`;
+        const popupHtml = `<a href="${escapeHtml(it.url)}" target="_blank"><strong>${escapeHtml(it.title)}</strong></a><br>${escapeHtml(price)}<br>${escapeHtml(loc)}${enrich.image?`<br><img src="${escapeHtml(enrich.image)}" style="max-width:180px;border-radius:8px">`:''}`;
         addListingToClusters(enrich.lat, enrich.lon, popupHtml, "Anzeigen in der Nähe");
       }
     }
