@@ -22,6 +22,9 @@ RUN if [ -f requirements.txt ]; then \
         pip install --no-cache-dir -r ebay-kleinanzeigen-api/requirements.txt; \
     fi
 
+# ensure uvicorn is available even if no requirements file is present
+RUN pip install --no-cache-dir uvicorn
+
 # Nginx & Supervisor Konfigs (liegen unter ops/)
 WORKDIR /app
 COPY ops/nginx.conf /etc/nginx/nginx.conf
