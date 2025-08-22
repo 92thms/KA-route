@@ -87,12 +87,20 @@ function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>f
 async function geocodeSuggest(q){
   if(!q||q.length<2) return [];
   if(geocodeCache.has(q)) return geocodeCache.get(q);
-  const url=`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=5&lang=de`;
-  const res=await fetch(url,{headers:NOMINATIM_HEADERS});
-  if(!res.ok) throw new Error("Photon Suggest HTTP "+res.status);
-  const data=await res.json();
-  const feats=Array.isArray(data.features)?data.features:[];
-  const items=feats.filter(f=>{const p=f.properties;const t=p.osm_value;return p.countrycode==="DE" && ["city","town","village","suburb","postcode","district"].includes(t);});
+const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=5&lang=de&countrycode=DE`;
+const res = await fetch(url, { headers: NOMINATIM_HEADERS });
+if (!res.ok) throw new Error("Photon Suggest HTTP " + res.status);
+
+const data = await res.json();
+const feats = Array.isArray(data?.features) ? data.features : [];
+
+const items = feats.filter(f => {
+  const p = f?.properties ?? {};
+  const t = p.osm_value;
+  // API filtert bereits countrycode=DE; wir prüfen zusätzlich defensiv
+  return p.countrycode === "DE" && ["city","town","village","suburb","postcode","district"].includes(t);
+});
+
   geocodeCache.set(q, items);
   return items;
 }
