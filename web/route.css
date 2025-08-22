@@ -1,5 +1,5 @@
   :root{
-    --bg:#1e1e1e;--fg:#e0e0e0;--card:#2a2a2a;--border:#444;--accent:#1e66f5;--ok:#43d17c;--err:#ef5350;
+    --bg:#1e1e1e;--fg:#e0e0e0;--card:#2a2a2a;--border:#444;--accent:#1e66f5;--ok:#9ae6b4;--err:#ef5350;
   }
   *{box-sizing:border-box}
   body{margin:0;font:14px/1.4 system-ui,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--fg)}
@@ -60,9 +60,9 @@
   #map-progress{
     width:100%;
     height:22px;
-    background:#202020;
+    background:var(--card);
     border:1px solid var(--border);
-    border-radius:8px;
+    border-radius:10px;
     overflow:hidden;
     margin:0 0 10px;
     position:relative;
@@ -71,11 +71,11 @@
   height:100%;
   width:0;
   transition:width .2s linear;
-  background:#2563eb;                 /* Basisfarbe */
+  background:#f4a261;                 /* Basisfarbe (Pastell-Orange) */
 }
 /* läuft + animiert */
 #map-progress .bar.active{
-  background: linear-gradient(90deg, #2563eb, #3b82f6);
+  background: linear-gradient(90deg, #f4a261, #f6ad72);
   background-size: 200% 100%;
   background-position: 0 0;
   animation: shimmer 1.5s linear infinite;
@@ -83,7 +83,7 @@
 }
 /* fertig (grün, keine Animation) */
 #map-progress .bar.done{
-  background:#22c55e;
+  background:#9ae6b4;                 /* Pastellgrün */
   animation:none;
 }
 /* abgebrochen (rot, keine Animation) */
