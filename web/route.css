@@ -74,7 +74,9 @@
       #2563eb 0 12px,
       #3b82f6 12px 24px
     );
-  animation: stripe 1.2s linear infinite;
+  background-size:48px 48px;
+  background-position:0 0;
+  animation:stripe 1.2s linear infinite;
 }
 /* fertig (grün, keine Animation) */
 #map-progress .bar.done{
@@ -86,7 +88,6 @@
   background:#ef4444;
   animation:none;
 }
-  }
   @keyframes stripe{
     from{ background-position:0 0; }
     to  { background-position:48px 0; }
