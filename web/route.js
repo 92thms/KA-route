@@ -114,7 +114,11 @@ async function geocodeSuggest(q){
 function bindSuggest(inputSel,listSel){
   const input=$(inputSel), list=$(listSel);
   const render=items=>{
-    if(!items.length){list.hidden=true;list.innerHTML="";return;}
+    if(!items.length){
+      list.innerHTML='<li class="muted">Keine Vorschläge gefunden</li>';
+      list.hidden=false;
+      return;
+    }
     list.innerHTML=items.map(i=>`<li data-lat="${Number(i.lat)}" data-lon="${Number(i.lon)}">${escapeHtml(i.display_name)}</li>`).join("");
     list.hidden=false;
   };
@@ -127,7 +131,11 @@ function bindSuggest(inputSel,listSel){
   list.addEventListener("click",e=>{const li=e.target.closest("li");if(li)onPick(li);});
   input.addEventListener("input",debounce(async()=>{
     try{ render(await geocodeSuggest(input.value)); }
-    catch(err){ setStatus("Autocomplete-Fehler: "+err.message,true); }
+    catch(err){
+      list.innerHTML=`<li class="muted">Fehler bei der Suche: ${escapeHtml(err.message)}</li>`;
+      list.hidden=false;
+      setStatus("Autocomplete-Fehler: "+err.message,true);
+    }
   },250));
   input.addEventListener("blur",()=>setTimeout(()=>list.hidden=true,150));
 }
@@ -434,6 +442,7 @@ const q=$("#query").value.trim();
   let startLL, zielLL;
   try{startLL=await getLonLatFromInput($("#start"));zielLL=await getLonLatFromInput($("#ziel"));}
 catch(e){
+  alert("Start oder Ziel nicht gefunden: "+e.message);
   setStatus("Start/Ziel unklar: "+e.message,true);
   running=false;
   setProgressState("aborted","Abgebrochen");
