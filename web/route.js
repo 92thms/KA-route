@@ -36,18 +36,13 @@ function setProgress(pct){
 function setProgressState(state /* 'active' | 'done' | 'aborted' */, msg){
   const bar = $("#progressBar"), txt = $("#progressText");
   bar.classList.remove("active","done","aborted");
-  if(state){
-    bar.classList.add(state);
-    bar.style.animation = state==="active" ? "stripe 1.2s linear infinite" : "";
-  } else {
-    bar.style.animation = "";
-  }
+  if(state) bar.classList.add(state);
   if(msg) txt.textContent = msg;
 }
 
-// -------- Status --------
-function setStatus(msg,isErr=false){const s=$("#status");const line=document.createElement("div");line.textContent=msg;line.className=isErr?"err":"ok";s.appendChild(line);}
-function resetStatus(){const s=$("#status");s.innerHTML="<strong>Status</strong> ";}
+// -------- Status (nur Konsole) --------
+function setStatus(msg,isErr=false){ (isErr?console.error:console.log)(msg); }
+function resetStatus(){}
 
 // -------- Ergebnisliste: gruppiert + Galerie --------
 const groups = new Map(); // key -> details element
@@ -404,8 +399,9 @@ startGroup.classList.add("hidden");
 zielGroup.classList.add("hidden");
 queryGroup.classList.add("hidden");
 mapBox.classList.remove("hidden");
+$("#results").classList.remove("hidden");
 map.invalidateSize();
-clearResults(); resetStatus();
+clearResults();
 setProgressState("active");           // animierte Streifen an
 setProgress(0);
 let totalFound = 0;                   // Trefferzähler für "Fertig"-Text

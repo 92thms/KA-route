@@ -78,6 +78,7 @@
   background-size:48px 48px;
   background-position:0 0;
   animation:stripe 1.2s linear infinite;
+  will-change: background-position;
 }
 /* fertig (grün, keine Animation) */
 #map-progress .bar.done{
@@ -154,13 +155,6 @@
   @media (max-width: 768px){
     .gallery-item { flex: 0 1 calc(50% - 12px); } /* 2 pro Zeile (Mobile) */
   }
-
-  /* Status pretty with <details> */
-  details{background:var(--card);border:1px solid var(--border);border-radius:10px}
-  summary{cursor:pointer;padding:10px 12px;font-weight:700;border-bottom:1px solid var(--border);list-style:none}
-  summary::marker,summary::-webkit-details-marker{display:none}
-  #status{padding:12px;max-height:260px;overflow:auto}
-  .ok{color:var(--ok)} .err{color:var(--err)}
 
   /* Popups Darkmode + Scrollbar */
   .leaflet-popup-content-wrapper{
