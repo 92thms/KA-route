@@ -1,6 +1,6 @@
-# Kleinanzeigen Route
+# Klanavo
 
-Durchsucht eBay Kleinanzeigen entlang beliebiger Routen. Ein FastAPI-Backend liefert Inserate und ein leichtes Frontend zeigt sie direkt auf der Karte.
+Klanavo durchsucht eBay Kleinanzeigen entlang beliebiger Routen. Ein FastAPI-Backend liefert Inserate und ein leichtes Frontend zeigt sie direkt auf der Karte.
 
 ## Schnellstart
 

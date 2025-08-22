@@ -1,9 +1,9 @@
 services:
-  kleinanzeigen_suite:
+  klanavo:
     build:
       context: .              # <— Projekt-Root als Kontext
       dockerfile: ops/Dockerfile
-    container_name: kleinanzeigen_suite
+    container_name: klanavo
     ports:
       - "8401:80"
     restart: unless-stopped

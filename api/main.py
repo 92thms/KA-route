@@ -1,4 +1,4 @@
-"""API service for :mod:`kleinanzeigen_suite`.
+"""API service for Klanavo.
 
 Previously the application exposed only a health-check endpoint and returned
 an empty payload for ``/inserate``.  This file now wires up the real
