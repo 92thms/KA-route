@@ -26,6 +26,28 @@ from utils.browser import PlaywrightManager  # type: ignore  # noqa: E402
 
 
 app = FastAPI()
+"""FastAPI application used to expose the scraper."""
+
+# Global Playwright browser so that it is not started for every request.  Starting
+# and stopping Playwright is quite expensive, therefore we keep a single browser
+# instance alive for the lifetime of the application and hand out new pages per
+# request.
+browser_manager: PlaywrightManager | None = None
+
+
+@app.on_event("startup")
+async def _startup() -> None:
+    """Initialise the Playwright browser on application start."""
+    global browser_manager
+    browser_manager = PlaywrightManager()
+    await browser_manager.start()
+
+
+@app.on_event("shutdown")
+async def _shutdown() -> None:  # pragma: no cover - defensive programming
+    """Close the Playwright browser when the application shuts down."""
+    if browser_manager is not None:
+        await browser_manager.close()
 
 
 @app.get("/health")
@@ -66,8 +88,9 @@ async def inserate(
         A dictionary with a ``data`` key containing the scraped classifieds.
     """
 
-    browser_manager = PlaywrightManager()
-    await browser_manager.start()
+    if browser_manager is None:  # pragma: no cover - should not happen
+        raise HTTPException(status_code=503, detail="Browser not initialised")
+
     try:
         results = await get_inserate_klaz(
             browser_manager,
@@ -80,7 +103,5 @@ async def inserate(
         )
     except Exception as exc:  # pragma: no cover - defensive programming
         raise HTTPException(status_code=500, detail=str(exc)) from exc
-    finally:
-        await browser_manager.close()
 
     return {"data": results}
