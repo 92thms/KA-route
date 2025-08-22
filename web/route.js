@@ -25,6 +25,7 @@ const resultMarkers = L.layerGroup().addTo(map);
 
 // Shorthands
 const $=sel=>document.querySelector(sel);
+const startGroup=$("#grpStart"), zielGroup=$("#grpZiel"), queryGroup=$("#grpQuery"), runGroup=$("#grpRun"), mapBox=$("#map-box");
 // Progress-Helfer
 function setProgress(pct){
   const bar = $("#progressBar"), txt = $("#progressText");
@@ -35,7 +36,12 @@ function setProgress(pct){
 function setProgressState(state /* 'active' | 'done' | 'aborted' */, msg){
   const bar = $("#progressBar"), txt = $("#progressText");
   bar.classList.remove("active","done","aborted");
-  if(state) bar.classList.add(state);
+  if(state){
+    bar.classList.add(state);
+    bar.style.animation = state==="active" ? "stripe 1.2s linear infinite" : "";
+  } else {
+    bar.style.animation = "";
+  }
   if(msg) txt.textContent = msg;
 }
 
@@ -383,13 +389,22 @@ $("#btnRun").addEventListener("click",()=>{
     setStatus("Suche abgebrochen.", true);
     setProgressState("aborted", "Abgebrochen");
     $("#btnRun").textContent="Route berechnen & suchen";
+    startGroup.classList.remove("hidden");
+    zielGroup.classList.remove("hidden");
+    queryGroup.classList.remove("hidden");
+    mapBox.classList.add("hidden");
   } else {
     run();
   }
 });
 
 async function run(){
-running=true; $("#btnRun").textContent="Stop";
+running=true; $("#btnRun").textContent="Abbrechen";
+startGroup.classList.add("hidden");
+zielGroup.classList.add("hidden");
+queryGroup.classList.add("hidden");
+mapBox.classList.remove("hidden");
+map.invalidateSize();
 clearResults(); resetStatus();
 setProgressState("active");           // animierte Streifen an
 setProgress(0);
@@ -410,6 +425,10 @@ catch(e){
   running=false;
   setProgressState("aborted","Abgebrochen");
   $("#btnRun").textContent="Route berechnen & suchen";
+  startGroup.classList.remove("hidden");
+  zielGroup.classList.remove("hidden");
+  queryGroup.classList.remove("hidden");
+  mapBox.classList.add("hidden");
   return;
 }
 
@@ -525,13 +544,18 @@ catch(e){
       }
     }
 
-    await Promise.all(Array.from({length:WORKERS},()=>worker()));
-setStatus("Fertig.");
-setProgress(100);
-setProgressState("done", `Fertig – ${totalFound} Inserate`);
+      await Promise.all(Array.from({length:WORKERS},()=>worker()));
+  setStatus("Fertig.");
+  setProgress(100);
+  setProgressState("done", `Fertig – ${totalFound} Inserate`);
+  runGroup.classList.add("hidden");
 }catch(e){
   setStatus(e.message,true);
   setProgressState("aborted","Abgebrochen");
+  startGroup.classList.remove("hidden");
+  zielGroup.classList.remove("hidden");
+  queryGroup.classList.remove("hidden");
+  mapBox.classList.add("hidden");
 }
 running=false; $("#btnRun").textContent="Route berechnen & suchen";
 }

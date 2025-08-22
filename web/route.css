@@ -8,6 +8,7 @@
   /* Links im Darkmode */
   a, a:visited{color:#b4c7ff;text-decoration:none}
   a:hover{color:#d5e2ff;text-decoration:underline}
+  .hidden{display:none!important}
 
   /* App Header */
   .app-header{
