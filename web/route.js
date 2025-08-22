@@ -25,7 +25,14 @@ const resultMarkers = L.layerGroup().addTo(map);
 
 // Shorthands
 const $=sel=>document.querySelector(sel);
-const startGroup=$("#grpStart"), zielGroup=$("#grpZiel"), queryGroup=$("#grpQuery"), runGroup=$("#grpRun"), mapBox=$("#map-box");
+const startGroup=$("#grpStart"), zielGroup=$("#grpZiel"), queryGroup=$("#grpQuery"), runGroup=$("#grpRun"), resetGroup=$("#grpReset"), mapBox=$("#map-box");
+
+// set contact email without exposing plain text in HTML
+(function(){
+  const user="klanavo", domain="zneb.to";
+  const el=document.getElementById("contact-email");
+  if(el){ const addr=user+"@"+domain; el.href="mailto:"+addr; el.textContent=addr; }
+})();
 // Progress-Helfer
 function setProgress(pct){
   const bar = $("#progressBar"), txt = $("#progressText");
@@ -64,6 +71,28 @@ function clearResults(){
   resultMarkers.clearLayers();markerClusters.length=0;
   groups.clear();
 }
+
+function resetAll(){
+  running=false;
+  $("#btnRun").textContent="Route berechnen & suchen";
+  startGroup.classList.remove("hidden");
+  zielGroup.classList.remove("hidden");
+  queryGroup.classList.remove("hidden");
+  runGroup.classList.remove("hidden");
+  resetGroup.classList.add("hidden");
+  mapBox.classList.add("hidden");
+  $("#results").classList.add("hidden");
+  clearResults();
+  const s=$("#start"), z=$("#ziel"), q=$("#query");
+  s.value=""; z.value=""; q.value="";
+  delete s.dataset.lat; delete s.dataset.lon;
+  delete z.dataset.lat; delete z.dataset.lon;
+  setProgress(0);
+  setProgressState(null, "0%");
+  if(routeLayer){ map.removeLayer(routeLayer); routeLayer=undefined; }
+}
+
+$("#btnReset").addEventListener("click", resetAll);
 function addResultGalleryGroup(loc, cardHtml){
   const results = $("#results");
   if(results.dataset.cleared!="1"){
@@ -404,6 +433,7 @@ async function fetchApiInserate(q, plz, rKm) {
 // ---------- Start/Stop ----------
 let running=false;
 $("#btnRun").addEventListener("click",()=>{
+  resetGroup.classList.add("hidden");
   if(running){
     running=false;
     setStatus("Suche abgebrochen.", true);
@@ -413,6 +443,7 @@ $("#btnRun").addEventListener("click",()=>{
     zielGroup.classList.remove("hidden");
     queryGroup.classList.remove("hidden");
     mapBox.classList.add("hidden");
+    runGroup.classList.remove("hidden");
   } else {
     run();
   }
@@ -571,6 +602,7 @@ catch(e){
   setProgress(100);
   setProgressState("done", `Fertig – ${totalFound} Inserate`);
   runGroup.classList.add("hidden");
+  resetGroup.classList.remove("hidden");
 }catch(e){
   setStatus(e.message,true);
   setProgressState("aborted","Abgebrochen");
@@ -578,6 +610,8 @@ catch(e){
   zielGroup.classList.remove("hidden");
   queryGroup.classList.remove("hidden");
   mapBox.classList.add("hidden");
+  runGroup.classList.remove("hidden");
+  resetGroup.classList.add("hidden");
 }
 running=false; $("#btnRun").textContent="Route berechnen & suchen";
 }
