@@ -28,6 +28,13 @@
     font-size:22px;
     font-weight:800;
     color:#fff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+  }
+  .app-header h1 img{
+    height:40px;
   }
   .app-header p{
     margin:0;
@@ -109,7 +116,9 @@
   /* Panel + Gruppen-Boxen */
   #panel{display:flex;flex-direction:column;gap:10px;padding:12px}
   #results{border:1px solid var(--border);border-radius:10px;padding:12px;background:var(--card)}
-  #results strong{display:block;margin-bottom:6px}
+  #results .results-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  #results strong{margin:0}
+  #results .toggle-all{background:none;border:none;color:var(--fg);cursor:pointer;font-size:14px}
   .row{padding:6px 0;border-bottom:1px dashed #444}.row:last-child{border-bottom:0}
   .muted{color:#aaa}
   .thumb{width:256px;height:256px;object-fit:cover;border-radius:6px;margin-right:8px;vertical-align:middle}

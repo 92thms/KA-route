@@ -25,7 +25,7 @@ const resultMarkers = L.layerGroup().addTo(map);
 
 // Shorthands
 const $=sel=>document.querySelector(sel);
-const startGroup=$("#grpStart"), zielGroup=$("#grpZiel"), queryGroup=$("#grpQuery"), runGroup=$("#grpRun"), mapBox=$("#map-box");
+const startGroup=$("#grpStart"), zielGroup=$("#grpZiel"), queryGroup=$("#grpQuery"), runGroup=$("#grpRun"), resetGroup=$("#grpReset"), mapBox=$("#map-box"), resultsBox=$("#results");
 // Progress-Helfer
 function setProgress(pct){
   const bar = $("#progressBar"), txt = $("#progressText");
@@ -47,27 +47,31 @@ function resetStatus(){}
 // -------- Ergebnisliste: gruppiert + Galerie --------
 const groups = new Map(); // key -> details element
 
+function resultsHeaderHTML(){
+  return '<div class="results-header"><strong>Ergebnisliste</strong><button id="btnToggleAll" class="toggle-all" data-state="closed" title="Alle ausklappen">▼</button></div>';
+}
+
 function ensureGroup(loc){
   const key=loc||"Unbekannt";
   if(groups.has(key)) return groups.get(key);
   const wrap=document.createElement('details');
   wrap.className='groupbox'; wrap.open=false;
   wrap.innerHTML=`<summary>${escapeHtml(key)} <span class="badge" data-count="0">0</span></summary><div class="gbody"><div class="gallery"></div></div>`;
-  $("#results").appendChild(wrap);
+  resultsBox.appendChild(wrap);
   groups.set(key, wrap);
   return wrap;
 }
 function clearResults(){
-  const r=$("#results");
-  r.innerHTML="<strong>Ergebnisliste</strong>";
+  const r=resultsBox;
+  r.innerHTML=resultsHeaderHTML();
   r.dataset.cleared="1";
   resultMarkers.clearLayers();markerClusters.length=0;
   groups.clear();
 }
 function addResultGalleryGroup(loc, cardHtml){
-  const results = $("#results");
+  const results = resultsBox;
   if(results.dataset.cleared!="1"){
-    results.innerHTML="<strong>Ergebnisliste</strong>";
+    results.innerHTML=resultsHeaderHTML();
     results.dataset.cleared="1";
   }
   const box=ensureGroup(loc);
@@ -81,6 +85,18 @@ function addResultGalleryGroup(loc, cardHtml){
   const badge=box.querySelector('.badge');
   badge.textContent=String(Number(badge.textContent)+1);
 }
+
+resultsBox.addEventListener('click', e => {
+  if(e.target.id === 'btnToggleAll'){
+    const btn = e.target;
+    const open = btn.dataset.state !== 'open';
+    resultsBox.querySelectorAll('details').forEach(d => d.open = open);
+    btn.dataset.state = open ? 'open' : 'closed';
+    btn.textContent = open ? '▲' : '▼';
+  }
+});
+
+$("#btnReset").addEventListener('click', () => location.reload());
 
 // -------- Debounce & Autocomplete (auf DE beschränkt) --------
 function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};}
@@ -571,6 +587,7 @@ catch(e){
   setProgress(100);
   setProgressState("done", `Fertig – ${totalFound} Inserate`);
   runGroup.classList.add("hidden");
+  resetGroup.classList.remove("hidden");
 }catch(e){
   setStatus(e.message,true);
   setProgressState("aborted","Abgebrochen");
@@ -578,6 +595,7 @@ catch(e){
   zielGroup.classList.remove("hidden");
   queryGroup.classList.remove("hidden");
   mapBox.classList.add("hidden");
+  resetGroup.classList.remove("hidden");
 }
 running=false; $("#btnRun").textContent="Route berechnen & suchen";
 }
