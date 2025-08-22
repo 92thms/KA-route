@@ -5,17 +5,18 @@ ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
 
 # Systemdienste
 RUN apt-get update \
- && apt-get install -y --no-install-recommends nginx supervisor wget ca-certificates gettext-base \
+ && apt-get install -y --no-install-recommends nginx supervisor wget ca-certificates gettext-base git \
  && rm -rf /var/lib/apt/lists/*
 
 # Arbeitsverzeichnis
 WORKDIR /app
 
-# Upstream-API unverändert hinein (Kontext = Projekt-Root!)
+# Upstream-API (Kleinanzeigen-Scraper) dynamisch nachziehen
 COPY api /app/api
+WORKDIR /app/api
+RUN git clone --depth=1 https://github.com/DanielWTE/ebay-kleinanzeigen-api.git ebay-kleinanzeigen-api
 
 # Python-Abhängigkeiten der API (falls vorhanden)
-WORKDIR /app/api
 RUN if [ -f requirements.txt ]; then \
         pip install --no-cache-dir -r requirements.txt; \
     elif [ -f ebay-kleinanzeigen-api/requirements.txt ]; then \
