@@ -14,27 +14,27 @@
 </div>
 
 <header>
-  <div class="group suggest">
+  <div class="group suggest" id="grpStart">
     <label for="start">Start</label>
     <input id="start" placeholder="Adresse/Ort eingeben" autocomplete="off">
     <ul id="start-suggest" hidden></ul>
   </div>
-  <div class="group suggest">
+  <div class="group suggest" id="grpZiel">
     <label for="ziel">Ziel</label>
     <input id="ziel" placeholder="Adresse/Ort eingeben" autocomplete="off">
     <ul id="ziel-suggest" hidden></ul>
   </div>
-  <div class="group">
+  <div class="group" id="grpQuery">
     <label for="query">Suchbegriff</label>
     <input id="query" placeholder="Suchbegriff">
   </div>
-  <div class="group">
+  <div class="group" id="grpRun">
     <label>&nbsp;</label>
     <button id="btnRun">Route berechnen &amp; suchen</button>
   </div>
 </header>
 
-<div id="map-box">
+<div id="map-box" class="hidden">
   <div id="map-progress"><div id="progressBar" class="bar"></div><span id="progressText" class="pct">0%</span></div>
   <div id="map"></div>
 </div>
