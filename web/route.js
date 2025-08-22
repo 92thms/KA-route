@@ -85,7 +85,9 @@ function addResultGalleryGroup(loc, cardHtml){
 // -------- Debounce & Autocomplete (auf DE beschränkt) --------
 function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};}
 async function geocodeSuggest(q){
-  if(!q||q.length<3) return [];
+  // Show suggestions as early as possible; Nominatim happily accepts
+  // two-character queries, so we only guard against empty strings.
+  if(!q||q.length<2) return [];
   if(geocodeCache.has(q)) return geocodeCache.get(q);
   const url=`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&countrycodes=de&q=${encodeURIComponent(q)}`;
   const res=await fetch(url,{headers:NOMINATIM_HEADERS});
