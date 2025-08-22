@@ -69,15 +69,10 @@
 }
 /* läuft + animiert */
 #map-progress .bar.active{
-  background:
-    repeating-linear-gradient(
-      45deg,
-      #2563eb 0 12px,
-      #3b82f6 12px 24px
-    );
-  background-size:48px 48px;
-  background-position:0 0;
-  animation:stripe 1.2s linear infinite;
+  background: linear-gradient(90deg, #2563eb, #3b82f6);
+  background-size: 200% 100%;
+  background-position: 0 0;
+  animation: shimmer 1.5s linear infinite;
   will-change: background-position;
 }
 /* fertig (grün, keine Animation) */
@@ -90,9 +85,9 @@
   background:#ef4444;
   animation:none;
 }
-  @keyframes stripe{
+  @keyframes shimmer{
     from{ background-position:0 0; }
-    to  { background-position:48px 0; }
+    to  { background-position:-200% 0; }
   }
   @media (prefers-reduced-motion: reduce){
     #map-progress .bar{ animation:none; }
@@ -111,6 +106,11 @@
   .row{padding:6px 0;border-bottom:1px dashed #444}.row:last-child{border-bottom:0}
   .muted{color:#aaa}
   .thumb{width:256px;height:256px;object-fit:cover;border-radius:6px;margin-right:8px;vertical-align:middle}
+
+  /* Popup/Preview Lists */
+  .preview-list{list-style:none;padding:0;margin:6px 0}
+  .preview-list li{position:relative;padding-left:12px;margin:4px 0}
+  .preview-list li::before{content:"";position:absolute;left:0;top:9px;width:4px;height:4px;border-radius:50%;background:var(--accent);}
 
   /* Auf-/zuklappbare Ortsgruppen + Galerie */
   #results .groupbox{border:1px solid var(--border);border-radius:10px;margin:10px 0;overflow:hidden;background:#151515}
