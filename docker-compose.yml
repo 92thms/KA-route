@@ -9,3 +9,7 @@ services:
     restart: unless-stopped
     shm_size: "1g"
     ipc: host
+    environment:
+      ORS_API_KEY: "CHANGE_ME"
+      SEARCH_RADIUS_KM: "10"
+      STEP_KM: "50"
