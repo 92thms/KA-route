@@ -87,11 +87,16 @@ function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>f
 async function geocodeSuggest(q){
   if(!q||q.length<2) return [];
   if(geocodeCache.has(q)) return geocodeCache.get(q);
-  const url=`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=5&lang=de&countrycode=DE`;
+  const url=`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=5&lang=de`;
   const res=await fetch(url,{headers:NOMINATIM_HEADERS});
   if(!res.ok) throw new Error("Photon Suggest HTTP "+res.status);
   const data=await res.json();
-  const items=data.features.filter(f=>{const t=f.properties.osm_value;return ["city","town","village","suburb","postcode","district"].includes(t);});
+  const items=(data.features||[]).filter(f=>{
+    const p=f.properties||{};
+    if(p.countrycode && p.countrycode.toUpperCase()!="DE") return false;
+    const t=p.osm_value;
+    return ["city","town","village","suburb","postcode","district"].includes(t);
+  });
   geocodeCache.set(q, items);
   return items;
 }
