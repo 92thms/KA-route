@@ -2,15 +2,16 @@
 <html lang="de">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Klanavo Routen-Suche</title>
+<title>klanavo</title>
+<link rel="icon" type="image/png" href="favico.png">
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
 <link rel="stylesheet" href="route.css">
 
 <body>
 
 <div class="app-header">
-  <h1>Klanavo Routensuche</h1>
-  <p>Berechne eine Route zwischen Start und Ziel, finde Inserate entlang der Strecke und sieh sie direkt auf der Karte.</p>
+  <h1><img src="klanavo.png" alt="klanavo" class="logo"> klanavo</h1>
+  <p>Plane deine Route von Start bis Ziel, entdecke Inserate entlang der Strecke und klick dich durch die grünen Pins auf der Karte. Bei Problemen schreib uns an klanavo[at]zneb.to.</p>
 </div>
 
 <header>
@@ -32,6 +33,10 @@
     <label>&nbsp;</label>
     <button id="btnRun">Route berechnen &amp; suchen</button>
   </div>
+  <div class="group hidden" id="grpReset">
+    <label>&nbsp;</label>
+    <button id="btnReset">Neustart</button>
+  </div>
 </header>
 
 <div id="map-box" class="hidden">
@@ -40,7 +45,7 @@
 </div>
 
 <div id="panel">
-  <div id="results" class="hidden"><strong>Ergebnisliste</strong></div>
+  <div id="results" class="hidden"><div class="results-header"><strong>Ergebnisliste</strong><button id="btnToggleAll" class="toggle-all" data-state="closed" title="Alle ausklappen">▼</button></div></div>
 </div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
