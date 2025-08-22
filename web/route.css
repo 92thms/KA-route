@@ -37,7 +37,8 @@
 
   /* Header / Inputs */
   header{
-    display:flex;flex-wrap:wrap;gap:10px;padding:12px;border-bottom:1px solid var(--border);background:var(--card)
+    display:flex;flex-wrap:wrap;gap:10px;padding:12px;background:var(--card);
+    border:1px solid var(--border);border-radius:10px
   }
   header .group{display:flex;flex-direction:column;gap:4px;flex:1;min-width:240px}
   input,button{
@@ -107,7 +108,7 @@
 
   /* Panel + Gruppen-Boxen */
   #panel{display:flex;flex-direction:column;gap:10px;padding:12px}
-  #results{border:1px solid var(--border);border-radius:10px;padding:12px;max-height:28vh;overflow:auto;background:var(--card)}
+  #results{border:1px solid var(--border);border-radius:10px;padding:12px;background:var(--card)}
   #results strong{display:block;margin-bottom:6px}
   .row{padding:6px 0;border-bottom:1px dashed #444}.row:last-child{border-bottom:0}
   .muted{color:#aaa}
@@ -205,5 +206,4 @@
     input,button{font-size:16px;padding:14px}
     #btnRun{width:100%}
     #map{height:45vh}
-    #results{max-height:32vh}
   }
