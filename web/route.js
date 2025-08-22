@@ -36,18 +36,13 @@ function setProgress(pct){
 function setProgressState(state /* 'active' | 'done' | 'aborted' */, msg){
   const bar = $("#progressBar"), txt = $("#progressText");
   bar.classList.remove("active","done","aborted");
-  if(state){
-    bar.classList.add(state);
-    bar.style.animation = state==="active" ? "stripe 1.2s linear infinite" : "";
-  } else {
-    bar.style.animation = "";
-  }
+  if(state) bar.classList.add(state);
   if(msg) txt.textContent = msg;
 }
 
-// -------- Status --------
-function setStatus(msg,isErr=false){const s=$("#status");const line=document.createElement("div");line.textContent=msg;line.className=isErr?"err":"ok";s.appendChild(line);}
-function resetStatus(){const s=$("#status");s.innerHTML="<strong>Status</strong> ";}
+// -------- Status (nur Konsole) --------
+function setStatus(msg,isErr=false){ (isErr?console.error:console.log)(msg); }
+function resetStatus(){}
 
 // -------- Ergebnisliste: gruppiert + Galerie --------
 const groups = new Map(); // key -> details element
@@ -90,20 +85,29 @@ function addResultGalleryGroup(loc, cardHtml){
 // -------- Debounce & Autocomplete (auf DE beschränkt) --------
 function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};}
 async function geocodeSuggest(q){
-  if(!q||q.length<3) return [];
+  q=q.trim();
+  if(!q||q.length<2) return [];
   if(geocodeCache.has(q)) return geocodeCache.get(q);
-  const url=`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&countrycodes=de&q=${encodeURIComponent(q)}`;
-  const res=await fetch(url,{headers:NOMINATIM_HEADERS});
-  if(!res.ok) throw new Error("Nominatim Suggest HTTP "+res.status);
+  const isPlz=/^\d{3,5}$/.test(q);
+  const base="https://photon.komoot.io/api/?lang=de&limit=5";
+  const url=isPlz?`${base}&postcode=${q}`:`${base}&q=${encodeURIComponent(q)}`;
+  const res=await fetch(url,{headers:{"Accept":"application/json"}});
+  if(!res.ok) throw new Error("Photon Suggest HTTP "+res.status);
   const data=await res.json();
-  geocodeCache.set(q, data);
-  return data;
+  const items=(data.features||[]).map(f=>({
+    lat:f.geometry.coordinates[1],
+    lon:f.geometry.coordinates[0],
+    label:[f.properties.name,f.properties.postcode].filter(Boolean).join(" "),
+    type:f.properties.osm_value
+  })).filter(f=>["city","town","village","hamlet","suburb","locality","postcode"].includes(f.type));
+  geocodeCache.set(q, items);
+  return items;
 }
 function bindSuggest(inputSel,listSel){
   const input=$(inputSel), list=$(listSel);
   const render=items=>{
     if(!items.length){list.hidden=true;list.innerHTML="";return;}
-    list.innerHTML=items.map(i=>`<li data-lat="${Number(i.lat)}" data-lon="${Number(i.lon)}">${escapeHtml(i.display_name)}</li>`).join("");
+    list.innerHTML=items.map(i=>`<li data-lat="${Number(i.lat)}" data-lon="${Number(i.lon)}">${escapeHtml(i.label)}</li>`).join("");
     list.hidden=false;
   };
   const onPick=li=>{
@@ -143,15 +147,15 @@ function addListingToClusters(lat, lon, itemHtml, titleForPopup="Anzeigen in der
   const existing = markerClusters.find(c => distMeters(c.lat,c.lon,lat,lon) < 200); // 200 m
   if(existing){
     existing.items.push(itemHtml);
-    const list = `<strong>${titleForPopup}</strong><ul style="padding-left:18px;margin:6px 0">
-      ${existing.items.map(x=>`<li style="margin:4px 0">${x}</li>`).join('')}
+    const list = `<strong>${titleForPopup}</strong><ul class="dot-list">
+      ${existing.items.map(x=>`<li>${x}</li>`).join('')}
     </ul>`;
     existing.marker.setPopupContent(list);
     return existing.marker;
   }else{
     const marker = L.marker([lat,lon],{icon:greenIcon}).addTo(resultMarkers);
-    const list = `<strong>${titleForPopup}</strong><ul style="padding-left:18px;margin:6px 0">
-      <li style="margin:4px 0">${itemHtml}</li>
+    const list = `<strong>${titleForPopup}</strong><ul class="dot-list">
+      <li>${itemHtml}</li>
     </ul>`;
     marker.bindPopup(list);
     markerClusters.push({lat,lon,marker,items:[itemHtml]});
@@ -404,8 +408,9 @@ startGroup.classList.add("hidden");
 zielGroup.classList.add("hidden");
 queryGroup.classList.add("hidden");
 mapBox.classList.remove("hidden");
+$("#results").classList.remove("hidden");
 map.invalidateSize();
-clearResults(); resetStatus();
+clearResults();
 setProgressState("active");           // animierte Streifen an
 setProgress(0);
 let totalFound = 0;                   // Trefferzähler für "Fertig"-Text

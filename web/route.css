@@ -69,15 +69,10 @@
 }
 /* läuft + animiert */
 #map-progress .bar.active{
-  background:
-    repeating-linear-gradient(
-      45deg,
-      #2563eb 0 12px,
-      #3b82f6 12px 24px
-    );
-  background-size:48px 48px;
-  background-position:0 0;
-  animation:stripe 1.2s linear infinite;
+  background:linear-gradient(90deg,#2563eb,#3b82f6,#2563eb);
+  background-size:200% 100%;
+  animation:bar-move 1.2s linear infinite;
+  will-change:background-position;
 }
 /* fertig (grün, keine Animation) */
 #map-progress .bar.done{
@@ -89,9 +84,9 @@
   background:#ef4444;
   animation:none;
 }
-  @keyframes stripe{
-    from{ background-position:0 0; }
-    to  { background-position:48px 0; }
+  @keyframes bar-move{
+    from{background-position:0 0;}
+    to{background-position:-200% 0;}
   }
   @media (prefers-reduced-motion: reduce){
     #map-progress .bar{ animation:none; }
@@ -155,13 +150,6 @@
     .gallery-item { flex: 0 1 calc(50% - 12px); } /* 2 pro Zeile (Mobile) */
   }
 
-  /* Status pretty with <details> */
-  details{background:var(--card);border:1px solid var(--border);border-radius:10px}
-  summary{cursor:pointer;padding:10px 12px;font-weight:700;border-bottom:1px solid var(--border);list-style:none}
-  summary::marker,summary::-webkit-details-marker{display:none}
-  #status{padding:12px;max-height:260px;overflow:auto}
-  .ok{color:var(--ok)} .err{color:var(--err)}
-
   /* Popups Darkmode + Scrollbar */
   .leaflet-popup-content-wrapper{
     background: var(--card);
@@ -186,6 +174,15 @@
   }
   .leaflet-popup-content a:hover{ text-decoration: underline; }
   .leaflet-popup-content img{ border-radius: 8px; max-width: 180px; height: auto; }
+
+  /* Popup listen mit dezenten Punkten */
+  .dot-list{list-style:none;margin:6px 0;padding:0}
+  .dot-list li{position:relative;padding-left:14px;margin:4px 0}
+  .dot-list li::before{
+    content:"";
+    position:absolute;left:0;top:50%;transform:translateY(-50%);
+    width:6px;height:6px;border-radius:50%;background:var(--accent);
+  }
 
   /* dunkle Scrollbar */
   .leaflet-popup-content::-webkit-scrollbar{width:10px}
