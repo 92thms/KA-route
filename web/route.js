@@ -85,35 +85,20 @@ function addResultGalleryGroup(loc, cardHtml){
 // -------- Debounce & Autocomplete (auf DE beschränkt) --------
 function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};}
 async function geocodeSuggest(q){
-  if(!q||q.length<2) return [];
+  if(!q||q.length<3) return [];
   if(geocodeCache.has(q)) return geocodeCache.get(q);
-  const url=`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=5&lang=de`;
+  const url=`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&countrycodes=de&q=${encodeURIComponent(q)}`;
   const res=await fetch(url,{headers:NOMINATIM_HEADERS});
-  if(!res.ok) throw new Error("Photon Suggest HTTP "+res.status);
+  if(!res.ok) throw new Error("Nominatim Suggest HTTP "+res.status);
   const data=await res.json();
-  const items=(data.features||[]).filter(f=>{
-    const p=f.properties||{};
-    if(p.countrycode && p.countrycode.toUpperCase()!="DE") return false;
-    const t=p.osm_value;
-    return ["city","town","village","suburb","postcode","district"].includes(t);
-  });
-  geocodeCache.set(q, items);
-  return items;
+  geocodeCache.set(q, data);
+  return data;
 }
 function bindSuggest(inputSel,listSel){
   const input=$(inputSel), list=$(listSel);
   const render=items=>{
     if(!items.length){list.hidden=true;list.innerHTML="";return;}
-    list.innerHTML=items.map(i=>{
-      const lat=Number(i.geometry.coordinates[1]);
-      const lon=Number(i.geometry.coordinates[0]);
-      const p=i.properties;
-      const parts=[p.name];
-      if(p.postcode) parts.push(p.postcode);
-      if(p.city && p.city!==p.name) parts.push(p.city);
-      if(p.country) parts.push(p.country);
-      return `<li data-lat="${lat}" data-lon="${lon}">${escapeHtml(parts.filter(Boolean).join(", "))}</li>`;
-    }).join("");
+    list.innerHTML=items.map(i=>`<li data-lat="${Number(i.lat)}" data-lon="${Number(i.lon)}">${escapeHtml(i.display_name)}</li>`).join("");
     list.hidden=false;
   };
   const onPick=li=>{
