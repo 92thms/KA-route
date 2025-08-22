@@ -11,7 +11,7 @@
   .hidden{display:none!important}
 
   /* Center content with max width */
-  .app-header, #map-box, #panel, footer{
+  .app-header, header, #map-box, #panel{
     max-width:900px;
     margin:0 auto;
   }
@@ -23,18 +23,6 @@
     border-bottom:2px solid var(--accent);
     text-align:center;
   }
-  #search-bar{
-    text-align:left;
-    display:flex;
-    flex-wrap:wrap;
-    gap:10px;
-    padding:12px;
-    background:var(--card);
-    border:1px solid var(--border);
-    border-radius:10px;
-    margin-bottom:20px;
-  }
-  #search-bar .group{display:flex;flex-direction:column;gap:4px;flex:1;min-width:240px}
   .app-header h1{
     margin:0 0 6px;
     font-size:22px;
@@ -47,16 +35,12 @@
     color:#ccc;
   }
 
-  /* Footer */
-  footer{
-    margin-top:20px;
-    padding:20px 12px;
-    background:var(--card);
-    border-top:2px solid var(--accent);
-    text-align:center;
-    font-size:14px;
-    color:#ccc;
+  /* Header / Inputs */
+  header{
+    display:flex;flex-wrap:wrap;gap:10px;padding:12px;background:var(--card);
+    border:1px solid var(--border);border-radius:10px
   }
+  header .group{display:flex;flex-direction:column;gap:4px;flex:1;min-width:240px}
   input,button{
     padding:10px 12px;border:1px solid var(--border);border-radius:10px;font:inherit;background:var(--card);color:var(--fg)
   }
@@ -213,12 +197,12 @@
 
   /* HARD mobile layout */
   @media (max-width: 768px){
-    #search-bar{
+    header{
       display:grid;
       grid-template-columns: 1fr;
       gap:14px;
     }
-    #search-bar .group{min-width:100%}
+    header .group{min-width:100%}
     input,button{font-size:16px;padding:14px}
     #btnRun{width:100%}
     #map{height:45vh}
