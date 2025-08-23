@@ -662,6 +662,31 @@ catch(e){
     let done=0; const seen=new Set();
     const DETAIL_LIMIT=10, DETAIL_PAR=4, WORKERS=4;
     let nextIndex=0;
+    let orsAvailable=true, orsWarned=false;
+
+    // --- Nominatim helper with rate limiting & retry ---
+    const nomQueue=[]; let nomActive=false;
+    function nominatimFetch(url){
+      return new Promise((resolve,reject)=>{nomQueue.push({url,resolve,reject});runNomQueue();});
+    }
+    async function runNomQueue(){
+      if(nomActive) return; nomActive=true;
+      while(nomQueue.length){
+        const {url,resolve,reject}=nomQueue.shift();
+        let success=false;
+        for(let attempt=0;attempt<3 && !success;attempt++){
+          try{
+            const j=await fetchJsonViaProxy(url);
+            resolve(j); success=true;
+          }catch(e){
+            if(attempt===2){reject(e);break;}
+            await new Promise(r=>setTimeout(r,500*(attempt+1)));
+          }
+        }
+        await new Promise(r=>setTimeout(r,1000));
+      }
+      nomActive=false;
+    }
 
     function progressIncrement(){
       if(myRun!==runCounter) return;
@@ -674,20 +699,27 @@ catch(e){
       const key=latS.toFixed(3)+"|"+lonS.toFixed(3);
       let plz=plzCache.get(key);
       if(!plz){
-        try{
-          const r=await fetch(`/ors/geocode/reverse?point.lon=${lonS}&point.lat=${latS}&size=1`,{headers:{"Accept":"application/json"}});
-          if(r.ok){
-            const j=await r.json();
-            plz=j?.features?.[0]?.properties?.postalcode||null;
-          }else{
-            setStatus(`ORS Reverse HTTP ${r.status}`,true);
+        if(orsAvailable){
+          try{
+            const r=await fetch(`/ors/geocode/reverse?point.lon=${lonS}&point.lat=${latS}&size=1`,{headers:{"Accept":"application/json"}});
+            if(r.ok){
+              const j=await r.json();
+              plz=j?.features?.[0]?.properties?.postalcode||null;
+            }else{
+              if(r.status===403){
+                orsAvailable=false;
+                if(!orsWarned){setStatus("ORS Reverse HTTP 403 - ORS deaktiviert",true); orsWarned=true;}
+              }else{
+                setStatus(`ORS Reverse HTTP ${r.status}`,true);
+              }
+            }
+          }catch(e){
+            setStatus(`ORS Reverse: ${e.message}`,true);
           }
-        }catch(e){
-          setStatus(`ORS Reverse: ${e.message}`,true);
         }
         if(!plz){
           try{
-            const j=await fetchJsonViaProxy(`https://nominatim.openstreetmap.org/reverse?lat=${latS}&lon=${lonS}&format=jsonv2&zoom=10&addressdetails=1`);
+            const j=await nominatimFetch(`https://nominatim.openstreetmap.org/reverse?lat=${latS}&lon=${lonS}&format=jsonv2&zoom=10&addressdetails=1&email=info@klanavo.invalid`);
             plz=j?.address?.postcode||null;
           }catch(e){
             setStatus(`Nominatim Reverse: ${e.message}`,true);
