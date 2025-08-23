@@ -38,10 +38,17 @@ async def get_inserate_klaz(
             else:
                 search_path = f"/s-preis:{min_price_str}:{max_price_str}/seite:{{page}}"
     else:
-        if category_id is not None:
-            search_path = f"/s-/c{category_id}/seite:{{page}}"
+        if location:
+            location_slug = location.replace(" ", "-")
+            if category_id is not None:
+                search_path = f"/s-{location_slug}/c{category_id}/seite:{{page}}"
+            else:
+                search_path = f"/s-{location_slug}/seite:{{page}}"
         else:
-            search_path = "/s-seite:{page}"
+            if category_id is not None:
+                search_path = f"/s-/c{category_id}/seite:{{page}}"
+            else:
+                search_path = "/s-seite:{page}"
 
     params: dict[str, str] = {}
     if query:
