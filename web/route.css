@@ -48,6 +48,9 @@
     border:1px solid var(--border);border-radius:10px
   }
   header .group{display:flex;flex-direction:column;gap:4px;flex:1;min-width:240px}
+  #grpSettings details{display:flex;flex-direction:column;gap:4px}
+  #grpSettings summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:4px;font-weight:700}
+  #grpSettings summary::marker,#grpSettings summary::-webkit-details-marker{display:none}
   input,button{
     padding:10px 12px;border:1px solid var(--border);border-radius:10px;font:inherit;background:var(--card);color:var(--fg)
   }
