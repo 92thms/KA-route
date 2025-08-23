@@ -467,7 +467,9 @@ async function reversePLZ(postal){
           const lat=f.geometry.coordinates[1], lon=f.geometry.coordinates[0];
           const props=f.properties||{};
           const city=props.locality||props.region||props.name||"";
-          return {lat,lon,display:`${postal}${city?` ${city}`:""}`};
+          if(city && !/deutschland/i.test(city)){
+            return {lat,lon,display:`${postal}${city?` ${city}`:""}`};
+          }
         }
       }
     }
@@ -590,7 +592,6 @@ $("#btnRun").addEventListener("click",()=>{
     categoryGroup.classList.remove("hidden");
     priceGroup.classList.remove("hidden");
     settingsGroup.classList.remove("hidden");
-    mapBox.classList.add("hidden");
   } else {
     run();
   }
