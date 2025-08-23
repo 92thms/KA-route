@@ -11,6 +11,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 from typing import Optional
+import inspect
 
 from fastapi import FastAPI, HTTPException
 
@@ -91,20 +92,30 @@ async def inserate(
         A dictionary with a ``data`` key containing the scraped classifieds.
     """
 
-    if browser_manager is None:  # pragma: no cover - should not happen
-        raise HTTPException(status_code=503, detail="Browser not initialised")
-
     try:
-        results = await get_inserate_klaz(
-            browser_manager,
-            query,
-            location,
-            radius,
-            category_id,
-            min_price,
-            max_price,
-            page_count,
-        )
+        sig = inspect.signature(get_inserate_klaz)
+        params = sig.parameters
+
+        kwargs = {}
+        if "browser_manager" in params:
+            if browser_manager is None:  # pragma: no cover - should not happen
+                raise HTTPException(status_code=503, detail="Browser not initialised")
+            kwargs["browser_manager"] = browser_manager
+
+        kwargs["query"] = query
+        kwargs["location"] = location
+        if "radius" in params:
+            kwargs["radius"] = radius
+        if "category_id" in params and category_id is not None:
+            kwargs["category_id"] = category_id
+        if "min_price" in params and min_price is not None:
+            kwargs["min_price"] = min_price
+        if "max_price" in params and max_price is not None:
+            kwargs["max_price"] = max_price
+        if "page_count" in params:
+            kwargs["page_count"] = page_count
+
+        results = await get_inserate_klaz(**kwargs)
     except Exception as exc:  # pragma: no cover - defensive programming
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
