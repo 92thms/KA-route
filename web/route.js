@@ -9,6 +9,7 @@ let rKm = Number(CONFIG.SEARCH_RADIUS_KM) || 10;
 let stepKm = Number(CONFIG.STEP_KM) || 10;
 const NOMINATIM_HEADERS = { "Accept":"application/json", "Accept-Language":"de" };
 const geocodeCache = new Map();
+const categoryMap = {};
 
 function escapeHtml(str){
   return String(str).replace(/[&<>"']/g, s => ({
@@ -76,6 +77,7 @@ async function loadCategories(){
   try{
     const cats=await fetch('categories.json').then(r=>r.json());
     cats.forEach(c=>{
+      categoryMap[c.id]=c.name;
       const opt=document.createElement('option');
       opt.value=c.id;
       opt.textContent=c.name;
@@ -86,6 +88,11 @@ async function loadCategories(){
   }
 }
 loadCategories();
+
+function extractCategoryId(url){
+  const m=url.match(/(\d+)-(\d+)(?:-\d+)?\.html?$/);
+  return m?m[2]:null;
+}
 // Progress-Helfer
 function setProgress(pct){
   const bar = $("#progressBar"), txt = $("#progressText");
@@ -156,7 +163,30 @@ resultsBox.addEventListener('click', e => {
   }
 });
 
-$("#btnReset").addEventListener('click', () => location.reload());
+$("#btnReset").addEventListener('click', () => {
+  runGroup.classList.remove("hidden");
+  resetGroup.classList.add("hidden");
+  startGroup.classList.remove("hidden");
+  zielGroup.classList.remove("hidden");
+  queryGroup.classList.remove("hidden");
+  categoryGroup.classList.remove("hidden");
+  priceGroup.classList.remove("hidden");
+  settingsGroup.classList.remove("hidden");
+  mapBox.classList.add("hidden");
+  resultsBox.classList.add("hidden");
+  if(routeLayer){ map.removeLayer(routeLayer); routeLayer=null; }
+  clearResults();
+  setProgress(0);
+  setProgressState(null,"0%");
+});
+
+$("#btnClear").addEventListener('click', () => {
+  ['start','ziel','query','priceMin','priceMax'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){ el.value=''; delete el.dataset.lat; delete el.dataset.lon; }
+  });
+  categorySelect.value='';
+});
 
 // -------- Debounce & Autocomplete (auf DE beschränkt) --------
 function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};}
@@ -443,8 +473,8 @@ const redIcon=L.icon({iconUrl:"https://maps.google.com/mapfiles/ms/icons/red-dot
 async function fetchApiInserate(q, plz, rKm, categoryId, minPrice, maxPrice) {
   const params=new URLSearchParams({query:q,location:plz,radius:rKm});
   if(categoryId) params.append('category_id', categoryId);
-  if(minPrice) params.append('min_price', minPrice);
-  if(maxPrice) params.append('max_price', maxPrice);
+  if(minPrice !== null && !Number.isNaN(minPrice)) params.append('min_price', String(minPrice));
+  if(maxPrice !== null && !Number.isNaN(maxPrice)) params.append('max_price', String(maxPrice));
   const paramStr=params.toString();
   const tries=[
     `${window.location.origin}/api/inserate?${paramStr}`,
@@ -517,9 +547,11 @@ setProgressState("active");           // animierte Streifen an
 setProgress(0);
 let totalFound = 0;                   // Trefferzähler für "Fertig"-Text
 const q=$("#query").value.trim();
-  const categoryId=categorySelect.value;
-  const minPrice=priceMinInput.value.trim();
-  const maxPrice=priceMaxInput.value.trim();
+  const categoryId=categorySelect.value||null;
+  const minPriceRaw=priceMinInput.value.trim();
+  const maxPriceRaw=priceMaxInput.value.trim();
+  const minPrice=minPriceRaw===""?null:Number(minPriceRaw);
+  const maxPrice=maxPriceRaw===""?null:Number(maxPriceRaw);
   rKm = radiusOptions[Number(radiusInput.value)] || rKm;
   stepKm = stepOptions[Number(stepInput.value)] || stepKm;
 
@@ -612,6 +644,15 @@ catch(e){
           items=[];
         }
       }
+      if(categoryId){
+        items=items.filter(it=>extractCategoryId(it.url)===String(categoryId));
+      }
+      if(minPrice!==null){
+        items=items.filter(it=>Number(it.price)>=minPrice);
+      }
+      if(maxPrice!==null){
+        items=items.filter(it=>Number(it.price)<=maxPrice);
+      }
       setStatus(`PLZ ${plz}: ${items.length} Treffer`);
 
       const fresh=[];
@@ -634,15 +675,18 @@ catch(e){
           const it=chunk[idx];
           const loc=enrich.label||plz||"?";
           const price=enrich.price;
+          const catId=extractCategoryId(it.url);
+          const catName=catId?categoryMap[catId]||"":"";
+          const infoLine=[price,catName].filter(Boolean).join(" • ");
           const cardHtml=`
           <a href="${escapeHtml(it.url)}" target="_blank" rel="noopener">
             ${enrich.image?`<img src="${escapeHtml(enrich.image)}" alt="">`:''}
             <strong>${escapeHtml(it.title)}</strong>
           </a>
-          <div class="muted">${escapeHtml(price)}</div>
+          <div class="muted">${escapeHtml(infoLine)}</div>
         `;
           addResultGalleryGroup(loc, cardHtml);
-          const popupHtml=`<a href="${escapeHtml(it.url)}" target="_blank"><strong>${escapeHtml(it.title)}</strong></a><br>${escapeHtml(price)}<br>${escapeHtml(loc)}${enrich.image?`<br><img src="${escapeHtml(enrich.image)}" style="max-width:180px;border-radius:8px">`:''}`;
+          const popupHtml=`<a href="${escapeHtml(it.url)}" target="_blank"><strong>${escapeHtml(it.title)}</strong></a><br>${escapeHtml(price)}${catName?`<br>${escapeHtml(catName)}`:''}<br>${escapeHtml(loc)}${enrich.image?`<br><img src="${escapeHtml(enrich.image)}" style="max-width:180px;border-radius:8px">`:''}`;
           addListingToClusters(enrich.lat,enrich.lon,popupHtml,"Anzeigen in der Nähe");
         });
       }
