@@ -4,7 +4,7 @@ Klanavo durchsucht eBay Kleinanzeigen entlang beliebiger Routen. Ein FastAPI-Bac
 
 ## Schnellstart
 
-1. `cp .env.example .env` und den eigenen ORS_API_KEY eintragen.
+1. `cp .env.example .env` und den eigenen ORS_API_KEY eintragen (der Schlüssel bleibt auf dem Server und wird nicht im Frontend verwendet).
 2. `docker-compose up --build`
 
 Optionale Parameter wie SEARCH_RADIUS_KM und STEP_KM lassen sich in `.env` anpassen.
