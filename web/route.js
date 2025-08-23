@@ -366,7 +366,7 @@ async function buildRouteIndex(coords){
 
 // -------- Proxy fetch --------
 async function fetchViaProxy(url){
-  const prox=`/proxy?u=${url}`;
+  const prox=`/proxy?u=${encodeURIComponent(url)}`;
   const r=await fetch(prox,{credentials:'omit',cache:'no-store'});
   if(!r.ok){const txt=await r.text().catch(()=>String(r.status));throw new Error(`Proxy HTTP ${r.status}${txt?": "+txt.slice(0,80):""}`);}
   return r.text();
