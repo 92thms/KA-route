@@ -175,7 +175,15 @@ resultsBox.addEventListener('click', e => {
   }
 });
 
+function clearInputFields(){
+  ['start','ziel','query','priceMin','priceMax'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){ el.value=''; delete el.dataset.lat; delete el.dataset.lon; }
+  });
+}
+
 $("#btnReset").addEventListener('click', () => {
+  clearInputFields();
   runGroup.classList.remove("hidden");
   resetGroup.classList.add("hidden");
   startGroup.classList.remove("hidden");
@@ -191,12 +199,7 @@ $("#btnReset").addEventListener('click', () => {
   setProgressState(null,"0%");
 });
 
-$("#btnClear").addEventListener('click', () => {
-  ['start','ziel','query','priceMin','priceMax'].forEach(id=>{
-    const el=document.getElementById(id);
-    if(el){ el.value=''; delete el.dataset.lat; delete el.dataset.lon; }
-  });
-});
+$("#btnClear").addEventListener('click', clearInputFields);
 
 // -------- Debounce & Autocomplete (auf DE beschränkt) --------
 function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};}
@@ -210,7 +213,7 @@ async function geocodeSuggest(q){
   let items;
   try{
     const url=`/ors/geocode/autocomplete?text=${encodeURIComponent(q)}&boundary.country=DE&size=5`;
-    const res=await fetch(url,{headers:{"Accept":"application/json"}});
+    const res=await fetch(url,{headers:{"Accept":"application/json"},signal:abortCtrl?.signal});
     if(!res.ok) throw new Error("ORS Suggest HTTP "+res.status);
     const data=await res.json();
     items=data.features.map(f=>({
@@ -353,7 +356,9 @@ async function buildRouteIndex(coords){
 // -------- Proxy fetch --------
 async function fetchViaProxy(url){
   const prox=`/proxy?u=${encodeURIComponent(url)}`;
-  const r=await fetch(prox,{credentials:'omit',cache:'no-store'});
+  const opts={credentials:'omit',cache:'no-store'};
+  if(abortCtrl) opts.signal=abortCtrl.signal;
+  const r=await fetch(prox,opts);
   if(!r.ok){const txt=await r.text().catch(()=>String(r.status));throw new Error(`Proxy HTTP ${r.status}${txt?": "+txt.slice(0,80):""}`);}
   return r.text();
 }
@@ -444,7 +449,7 @@ async function parseListingDetails(html){
 async function reversePLZ(postal){
   try{
     const url=`/ors/geocode/search/structured?postalcode=${encodeURIComponent(postal)}&country=DE&size=1`;
-    const res=await fetch(url,{headers:{"Accept":"application/json"}});
+    const res=await fetch(url,{headers:{"Accept":"application/json"},signal:abortCtrl?.signal});
     if(res.ok){
       const j=await res.json();
       const f=j?.features?.[0];
@@ -475,7 +480,7 @@ async function reversePLZ(postal){
 async function geocodeTextOnce(text){
   try{
     const url=`/ors/geocode/search?text=${encodeURIComponent(text)}&boundary.country=DE&size=1`;
-    const j=await fetch(url,{headers:{"Accept":"application/json"}}).then(r=>r.json());
+    const j=await fetch(url,{headers:{"Accept":"application/json"},signal:abortCtrl?.signal}).then(r=>r.json());
     const f=j?.features?.[0];
     if(f){
       const lat=f.geometry.coordinates[1], lon=f.geometry.coordinates[0];
@@ -530,6 +535,11 @@ async function fetchApiInserate(q, plz, rKm, minPrice, maxPrice) {
   async function tryOnce(url, useMode) {
     const ctrl = new AbortController();
     const t = setTimeout(()=>ctrl.abort(), 10000);
+    let onAbort;
+    if(abortCtrl){
+      onAbort=()=>ctrl.abort();
+      abortCtrl.signal.addEventListener('abort', onAbort);
+    }
     try{
       const resp = await fetch(url, {
         method: "GET",
@@ -545,6 +555,8 @@ async function fetchApiInserate(q, plz, rKm, minPrice, maxPrice) {
     }catch(e){
       clearTimeout(t);
       throw e;
+    }finally{
+      if(abortCtrl && onAbort) abortCtrl.signal.removeEventListener('abort', onAbort);
     }
   }
 
@@ -560,10 +572,13 @@ async function fetchApiInserate(q, plz, rKm, minPrice, maxPrice) {
 // ---------- Start/Stop ----------
 let running=false;
 let runCounter=0;
+let abortCtrl=null;
 $("#btnRun").addEventListener("click",()=>{
   if(running){
     running=false;
     runCounter++;
+    if(abortCtrl) abortCtrl.abort();
+    abortCtrl=null;
     setStatus("Suche abgebrochen.", true);
     setProgressState("aborted", "Abgebrochen");
     $("#btnRun").textContent="Route berechnen & suchen";
@@ -572,6 +587,8 @@ $("#btnRun").addEventListener("click",()=>{
     queryGroup.classList.remove("hidden");
     priceGroup.classList.remove("hidden");
     settingsGroup.classList.remove("hidden");
+    runGroup.classList.add("hidden");
+    resetGroup.classList.remove("hidden");
   } else {
     run();
   }
@@ -579,6 +596,7 @@ $("#btnRun").addEventListener("click",()=>{
 
 async function run(){
 const myRun=++runCounter;
+abortCtrl=new AbortController();
 running=true; $("#btnRun").textContent="Abbrechen";
 startGroup.classList.add("hidden");
 zielGroup.classList.add("hidden");
@@ -612,7 +630,7 @@ const q=$("#query").value.trim();
 catch(e){
   alert("Start oder Ziel nicht gefunden: "+e.message);
   setStatus("Start/Ziel unklar: "+e.message,true);
-  running=false;
+  running=false; abortCtrl=null;
   setProgressState("aborted","Abgebrochen");
   $("#btnRun").textContent="Route berechnen & suchen";
   startGroup.classList.remove("hidden");
@@ -632,7 +650,8 @@ catch(e){
   try{
     const res=await fetch(`/ors/v2/directions/driving-car/geojson`,{
       method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({coordinates:[startLL,zielLL]})
+      body:JSON.stringify({coordinates:[startLL,zielLL]}),
+      signal:abortCtrl.signal
     });
     const data=await res.json();
     const coords=data.features[0].geometry.coordinates;
@@ -813,13 +832,16 @@ catch(e){
   if(myRun===runCounter){
     setStatus(e.message,true);
     setProgressState("aborted","Abgebrochen");
-    startGroup.classList.remove("hidden");
-    zielGroup.classList.remove("hidden");
-    queryGroup.classList.remove("hidden");
-    settingsGroup.classList.remove("hidden");
-    mapBox.classList.add("hidden");
+    if(running){
+      startGroup.classList.remove("hidden");
+      zielGroup.classList.remove("hidden");
+      queryGroup.classList.remove("hidden");
+      settingsGroup.classList.remove("hidden");
+      mapBox.classList.add("hidden");
+    }
+    runGroup.classList.add("hidden");
     resetGroup.classList.remove("hidden");
   }
 }
-running=false; $("#btnRun").textContent="Route berechnen & suchen";
+running=false; $("#btnRun").textContent="Route berechnen & suchen"; abortCtrl=null;
 }

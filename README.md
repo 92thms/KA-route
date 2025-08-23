@@ -12,3 +12,9 @@ Optionale Parameter wie SEARCH_RADIUS_KM, STEP_KM und USE_ORS_REVERSE lassen sic
 Um einen Wartungsmodus zu aktivieren, können `MAINTENANCE_MODE=1` und ein passender `MAINTENANCE_KEY` in der `.env` gesetzt werden. Ohne gültigen Schlüssel zeigt die Anwendung nur einen Hinweis auf Wartungsarbeiten.
 
 Das Frontend steht anschließend unter http://localhost:8401 bereit.
+
+## Bedienung
+
+Während der Suche kann über den Button **Abbrechen** der Vorgang sofort gestoppt werden. Bereits gefundene Ergebnisse bleiben erhalten. Mit **Neustart** wird die Anwendung komplett zurückgesetzt und alle Eingabefelder geleert.
+
+Der Quellcode befindet sich auf GitHub unter https://github.com/92thms/ka-route.
