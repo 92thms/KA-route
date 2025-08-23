@@ -48,9 +48,17 @@
     border:1px solid var(--border);border-radius:10px
   }
   header .group{display:flex;flex-direction:column;gap:4px;flex:1;min-width:240px}
-  #grpSettings details{display:flex;flex-direction:column;gap:4px}
+  #grpSettings,#grpRun{flex:1 1 100%}
+  #grpSettings details{display:flex;flex-direction:column;gap:4px;width:100%}
   #grpSettings summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:4px;font-weight:700}
   #grpSettings summary::marker,#grpSettings summary::-webkit-details-marker{display:none}
+  #btnRun{width:100%}
+  input[type=range]{-webkit-appearance:none;width:100%;background:transparent;cursor:pointer}
+  input[type=range]:focus{outline:none}
+  input[type=range]::-webkit-slider-runnable-track{height:6px;background:var(--border);border-radius:3px}
+  input[type=range]::-moz-range-track{height:6px;background:var(--border);border-radius:3px}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;height:14px;width:14px;border-radius:50%;background:var(--accent);margin-top:-4px}
+  input[type=range]::-moz-range-thumb{height:14px;width:14px;border:none;border-radius:50%;background:var(--accent)}
   input,button{
     padding:10px 12px;border:1px solid var(--border);border-radius:10px;font:inherit;background:var(--card);color:var(--fg)
   }

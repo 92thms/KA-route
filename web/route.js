@@ -2,8 +2,10 @@
 
 const CONFIG = window.CONFIG || {};
 const ORS_APIKEY = CONFIG.ORS_API_KEY || "";
+const radiusOptions=[5,10,20];
+const stepOptions=[5,10,20];
 let rKm = Number(CONFIG.SEARCH_RADIUS_KM) || 10;
-let stepKm = Number(CONFIG.STEP_KM) || 50;
+let stepKm = Number(CONFIG.STEP_KM) || 10;
 const NOMINATIM_HEADERS = { "Accept":"application/json", "Accept-Language":"de" };
 const geocodeCache = new Map();
 
@@ -26,9 +28,15 @@ const resultMarkers = L.layerGroup().addTo(map);
 // Shorthands
 const $=sel=>document.querySelector(sel);
 const startGroup=$("#grpStart"), zielGroup=$("#grpZiel"), queryGroup=$("#grpQuery"), settingsGroup=$("#grpSettings"), runGroup=$("#grpRun"), resetGroup=$("#grpReset"), mapBox=$("#map-box"), resultsBox=$("#results");
-const radiusInput=$("#radius"), stepInput=$("#step");
-radiusInput.value=rKm;
-stepInput.value=stepKm;
+const radiusInput=$("#radius"), stepInput=$("#step"), radiusVal=$("#radiusVal"), stepVal=$("#stepVal");
+const radiusIdx=radiusOptions.indexOf(rKm);
+radiusInput.value=radiusIdx>=0?radiusIdx:1;
+radiusVal.textContent=radiusOptions[radiusInput.value];
+const stepIdx=stepOptions.indexOf(stepKm);
+stepInput.value=stepIdx>=0?stepIdx:1;
+stepVal.textContent=stepOptions[stepInput.value];
+radiusInput.addEventListener('input',()=>radiusVal.textContent=radiusOptions[radiusInput.value]);
+stepInput.addEventListener('input',()=>stepVal.textContent=stepOptions[stepInput.value]);
 // Progress-Helfer
 function setProgress(pct){
   const bar = $("#progressBar"), txt = $("#progressText");
@@ -452,8 +460,8 @@ setProgressState("active");           // animierte Streifen an
 setProgress(0);
 let totalFound = 0;                   // Trefferzähler für "Fertig"-Text
 const q=$("#query").value.trim();
-rKm = Number(radiusInput.value) || rKm;
-stepKm = Number(stepInput.value) || stepKm;
+  rKm = radiusOptions[Number(radiusInput.value)] || rKm;
+  stepKm = stepOptions[Number(stepInput.value)] || stepKm;
 
   // Geocode Inputs
   async function getLonLatFromInput(inp){

@@ -32,10 +32,20 @@
   <div class="group" id="grpSettings">
     <details>
       <summary>⚙ Einstellungen</summary>
-      <label for="radius" title="Umkreis der Suche">Suchradius (km)</label>
-      <input id="radius" type="number" min="1" step="1" value="10" title="Umkreis der Suche">
-      <label for="step" title="Abstand zwischen Wegpunkten">Punktabstand (km)</label>
-      <input id="step" type="number" min="1" step="1" value="50" title="Abstand zwischen Wegpunkten">
+      <label for="radius" title="Umkreis der Suche">Suchradius: <span id="radiusVal"></span> km</label>
+      <input id="radius" type="range" min="0" max="2" step="1" value="1" list="radiusTicks" title="Umkreis der Suche">
+      <datalist id="radiusTicks">
+        <option value="0" label="5"></option>
+        <option value="1" label="10"></option>
+        <option value="2" label="20"></option>
+      </datalist>
+      <label for="step" title="Abstand zwischen Wegpunkten">Punktabstand: <span id="stepVal"></span> km</label>
+      <input id="step" type="range" min="0" max="2" step="1" value="1" list="stepTicks" title="Abstand zwischen Wegpunkten">
+      <datalist id="stepTicks">
+        <option value="0" label="5"></option>
+        <option value="1" label="10"></option>
+        <option value="2" label="20"></option>
+      </datalist>
     </details>
   </div>
   <div class="group" id="grpRun">
