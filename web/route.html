@@ -8,6 +8,10 @@
 <link rel="stylesheet" href="route.css">
 
 <body>
+<div class="app-header">
+  <h1><img src="klanavo.png" alt="klanavo" class="logo"> klanavo</h1>
+  <p>Plane deine Route von Start bis Ziel, entdecke Inserate entlang der Strecke und klick dich durch die grünen Pins auf der Karte. </br> Bei Problemen schreib uns an klanavo[at]zneb.to.</p>
+</div>
 <div id="maintenance" class="hidden">
   <p>Sorry, Wartungsarbeiten (bin am rumfpuschen)</p>
   <input id="maintenanceKey" type="password" placeholder="Zugangsschlüssel">
@@ -15,11 +19,6 @@
 </div>
 
 <div id="app" class="hidden">
-
-<div class="app-header">
-  <h1><img src="klanavo.png" alt="klanavo" class="logo"> klanavo</h1>
-  <p>Plane deine Route von Start bis Ziel, entdecke Inserate entlang der Strecke und klick dich durch die grünen Pins auf der Karte. </br> Bei Problemen schreib uns an klanavo[at]zneb.to.</p>
-</div>
 
 <header>
   <div class="group suggest" id="grpStart">
@@ -89,6 +88,8 @@
   <div id="results" class="hidden"><div class="results-header"><strong>Ergebnisliste</strong><button id="btnToggleAll" class="toggle-all" data-state="closed" title="Alle ausklappen">▼</button></div></div>
 </div>
 
+</div> <!-- end app -->
+
 <footer class="app-footer">
   <a href="https://github.com/vrwlx/ka-route" target="_blank" rel="noopener" title="GitHub">
     <svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true" fill="currentColor">
@@ -101,8 +102,6 @@
     </svg>
   </a>
 </footer>
-
-</div> <!-- end app -->
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="config.js"></script>
