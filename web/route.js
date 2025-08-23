@@ -3,6 +3,7 @@
 const CONFIG = window.CONFIG || {};
 const MAINTENANCE_MODE = Boolean(CONFIG.MAINTENANCE_MODE);
 const MAINTENANCE_KEY = CONFIG.MAINTENANCE_KEY || "";
+const USE_ORS_REVERSE = Boolean(CONFIG.USE_ORS_REVERSE);
 const appEl=document.getElementById("app");
 const maintenanceEl=document.getElementById("maintenance");
 if(MAINTENANCE_MODE && MAINTENANCE_KEY){
@@ -662,7 +663,7 @@ catch(e){
     let done=0; const seen=new Set();
     const DETAIL_LIMIT=10, DETAIL_PAR=4, WORKERS=4;
     let nextIndex=0;
-    let orsAvailable=true, orsWarned=false;
+    let orsAvailable=USE_ORS_REVERSE, orsWarned=false;
 
     // --- Nominatim helper with rate limiting & retry ---
     const nomQueue=[]; let nomActive=false;
