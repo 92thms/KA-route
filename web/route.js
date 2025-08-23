@@ -30,7 +30,8 @@ const radiusOptions=[5,10,20];
 const stepOptions=[5,10,20];
 let rKm = Number(CONFIG.SEARCH_RADIUS_KM) || 10;
 let stepKm = Number(CONFIG.STEP_KM) || 10;
-const NOMINATIM_HEADERS = { "Accept":"application/json", "Accept-Language":"de" };
+// Alle Nominatim-Anfragen werden über einen Proxy geleitet,
+// daher sind keine speziellen Header mehr nötig.
 const geocodeCache = new Map();
 const categoryMap = {};
 
@@ -233,9 +234,7 @@ async function geocodeSuggest(q){
     }));
   }else{
     const url=`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&countrycodes=de&q=${encodeURIComponent(q)}`;
-    const res=await fetch(url,{headers:NOMINATIM_HEADERS});
-    if(!res.ok) throw new Error("Nominatim Suggest HTTP "+res.status);
-    items=await res.json();
+    items=await fetchJsonViaProxy(url);
   }
   geocodeCache.set(q, items);
   return items;
@@ -373,6 +372,16 @@ async function fetchViaProxy(url){
   return r.text();
 }
 
+// Proxy-Helfer für JSON-Antworten
+async function fetchJsonViaProxy(url){
+  const txt = await fetchViaProxy(url);
+  try{
+    return JSON.parse(txt);
+  }catch(err){
+    throw new Error("Proxy JSON parse error: "+err.message);
+  }
+}
+
 // -------- Preisformat --------
 function formatPrice(p){
   if(!p)return"VB oder Kostenlos";
@@ -448,20 +457,40 @@ async function parseListingDetails(html){
 
 async function reversePLZ(postal){
   try{
-    const url=`https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=1&countrycodes=de&postalcode=${encodeURIComponent(postal)}`;
-    const res=await fetch(url,{headers:NOMINATIM_HEADERS});
-    const j=await res.json();
-    if(j&&j[0]){const a=j[0].address||{};const city=cityFromAddr(a);return {lat:+j[0].lat,lon:+j[0].lon,display:`${postal}${city?` ${city}`:''}`};}
-  }catch(_){}
+    if(ORS_APIKEY){
+      const url=`https://api.openrouteservice.org/geocode/search/structured?api_key=${encodeURIComponent(ORS_APIKEY)}&postalcode=${encodeURIComponent(postal)}&country=DE&size=1`;
+      const j=await fetch(url,{headers:{"Accept":"application/json"}}).then(r=>r.json());
+      const f=j?.features?.[0];
+      if(f){
+        const lat=f.geometry.coordinates[1], lon=f.geometry.coordinates[0];
+        const city=f.properties.locality||f.properties.region||"";
+        return {lat,lon,display:`${postal}${city?` ${city}`:""}`};
+      }
+    }else{
+      const url=`https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=1&countrycodes=de&postalcode=${encodeURIComponent(postal)}`;
+      const j=await fetchJsonViaProxy(url);
+      if(j&&j[0]){const a=j[0].address||{};const city=cityFromAddr(a);return {lat:+j[0].lat,lon:+j[0].lon,display:`${postal}${city?` ${city}`:''}`};}
+    }
+  }catch(_){ }
   return {lat:null,lon:null,display:postal};
 }
+
 async function geocodeTextOnce(text){
   try{
-    const url=`https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=1&countrycodes=de&q=${encodeURIComponent(text)}`;
-    const res=await fetch(url,{headers:NOMINATIM_HEADERS});
-    const j=await res.json();
-    if(j&&j[0]){const a=j[0].address||{};return {lat:+j[0].lat,lon:+j[0].lon,label:cityFromAddr(a)||text};}
-  }catch(_){}
+    if(ORS_APIKEY){
+      const url=`https://api.openrouteservice.org/geocode/search?api_key=${encodeURIComponent(ORS_APIKEY)}&text=${encodeURIComponent(text)}&boundary.country=DE&size=1`;
+      const j=await fetch(url,{headers:{"Accept":"application/json"}}).then(r=>r.json());
+      const f=j?.features?.[0];
+      if(f){
+        const lat=f.geometry.coordinates[1], lon=f.geometry.coordinates[0];
+        return {lat,lon,label:f.properties.label||text};
+      }
+    }else{
+      const url=`https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=1&countrycodes=de&q=${encodeURIComponent(text)}`;
+      const j=await fetchJsonViaProxy(url);
+      if(j&&j[0]){const a=j[0].address||{};return {lat:+j[0].lat,lon:+j[0].lon,label:cityFromAddr(a)||text};}
+    }
+  }catch(_){ }
   return {lat:null,lon:null,label:text};
 }
 
@@ -584,9 +613,9 @@ const q=$("#query").value.trim();
   // Geocode Inputs
   async function getLonLatFromInput(inp){
     if(inp.dataset.lat&&inp.dataset.lon)return[Number(inp.dataset.lon),Number(inp.dataset.lat)];
-    const res=await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(inp.value)}`,{headers:NOMINATIM_HEADERS});
-    const j=await res.json(); if(!j.length) throw new Error("Kein Treffer für "+inp.value);
-    inp.dataset.lat=j[0].lat;inp.dataset.lon=j[0].lon; return[Number(inp.dataset.lon),Number(inp.dataset.lat)];
+    const g=await geocodeTextOnce(inp.value);
+    if(!g.lat||!g.lon) throw new Error("Kein Treffer für "+inp.value);
+    inp.dataset.lat=g.lat;inp.dataset.lon=g.lon; return[Number(inp.dataset.lon),Number(inp.dataset.lat)];
   }
   let startLL, zielLL;
   try{startLL=await getLonLatFromInput($("#start"));zielLL=await getLonLatFromInput($("#ziel"));}
@@ -653,9 +682,18 @@ catch(e){
       let plz=plzCache.get(key);
       if(!plz){
         try{
-          const r=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latS}&lon=${lonS}&format=jsonv2&zoom=10&addressdetails=1`,{headers:NOMINATIM_HEADERS});
-          const j=await r.json(); plz=j?.address?.postcode||null;
-        }catch(_){}
+          if(ORS_APIKEY){
+            const r=await fetch(`https://api.openrouteservice.org/geocode/reverse?api_key=${encodeURIComponent(ORS_APIKEY)}&point.lon=${lonS}&point.lat=${latS}&size=1`,{headers:{"Accept":"application/json"}});
+            const j=await r.json();
+            plz=j?.features?.[0]?.properties?.postalcode||null;
+          }
+        }catch(_){ }
+        if(!plz){
+          try{
+            const j=await fetchJsonViaProxy(`https://nominatim.openstreetmap.org/reverse?lat=${latS}&lon=${lonS}&format=jsonv2&zoom=10&addressdetails=1`);
+            plz=j?.address?.postcode||null;
+          }catch(_){ }
+        }
         plzCache.set(key,plz);
       }
       if(!plz){ progressIncrement(); return; }
