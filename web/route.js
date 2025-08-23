@@ -24,8 +24,6 @@ if(MAINTENANCE_MODE && MAINTENANCE_KEY){
   appEl.classList.remove("hidden");
 }
 
-const DEFAULT_ORS_APIKEY = CONFIG.ORS_API_KEY || "";
-let ORS_APIKEY = localStorage.getItem("orsApiKey") || DEFAULT_ORS_APIKEY;
 const radiusOptions=[5,10,20];
 const stepOptions=[5,10,20];
 let rKm = Number(CONFIG.SEARCH_RADIUS_KM) || 10;
@@ -54,7 +52,7 @@ const resultMarkers = L.layerGroup().addTo(map);
 // Shorthands
 const $=sel=>document.querySelector(sel);
 const startGroup=$("#grpStart"), zielGroup=$("#grpZiel"), queryGroup=$("#grpQuery"), categoryGroup=$("#grpCategory"), priceGroup=$("#grpPrice"), settingsGroup=$("#grpSettings"), runGroup=$("#grpRun"), resetGroup=$("#grpReset"), mapBox=$("#map-box"), resultsBox=$("#results");
-const radiusInput=$("#radius"), stepInput=$("#step"), radiusVal=$("#radiusVal"), stepVal=$("#stepVal"), apiKeyInput=$("#apiKey"), rateLimitInfo=$("#rateLimitInfo"), categorySelect=$("#category"), priceMinInput=$("#priceMin"), priceMaxInput=$("#priceMax");
+const radiusInput=$("#radius"), stepInput=$("#step"), radiusVal=$("#radiusVal"), stepVal=$("#stepVal"), rateLimitInfo=$("#rateLimitInfo"), categorySelect=$("#category"), priceMinInput=$("#priceMin"), priceMaxInput=$("#priceMax");
 const radiusIdx=radiusOptions.indexOf(rKm);
 radiusInput.value=radiusIdx>=0?radiusIdx:1;
 radiusVal.textContent=radiusOptions[radiusInput.value];
@@ -64,36 +62,22 @@ stepVal.textContent=stepOptions[stepInput.value];
 radiusInput.addEventListener('input',()=>radiusVal.textContent=radiusOptions[radiusInput.value]);
 stepInput.addEventListener('input',()=>stepVal.textContent=stepOptions[stepInput.value]);
 
-apiKeyInput.value = localStorage.getItem("orsApiKey") || "";
-apiKeyInput.addEventListener("change", () => {
-  const val = apiKeyInput.value.trim();
-  if(val){
-    ORS_APIKEY = val;
-    localStorage.setItem("orsApiKey", val);
-  }else{
-    ORS_APIKEY = DEFAULT_ORS_APIKEY;
-    localStorage.removeItem("orsApiKey");
-  }
-  updateRateLimitInfo();
-});
-
 async function updateRateLimitInfo(){
-  if(!ORS_APIKEY){ rateLimitInfo.textContent=""; return; }
-  try{
-    const res=await fetch(`https://api.openrouteservice.org/geocode/autocomplete?api_key=${encodeURIComponent(ORS_APIKEY)}&text=Berlin&boundary.country=DE&size=1`,{headers:{"Accept":"application/json"}});
-    const limit=res.headers.get("x-ratelimit-limit");
-    const remain=res.headers.get("x-ratelimit-remaining");
-    if(limit&&remain){
-      rateLimitInfo.textContent=`Rate Limit: ${remain}/${limit}`;
-    }else{
-      rateLimitInfo.textContent="";
+    try{
+      const res=await fetch(`/ors/geocode/autocomplete?text=Berlin&boundary.country=DE&size=1`,{headers:{"Accept":"application/json"}});
+      const limit=res.headers.get("x-ratelimit-limit");
+      const remain=res.headers.get("x-ratelimit-remaining");
+      if(limit&&remain){
+        rateLimitInfo.textContent=`Rate Limit: ${remain}/${limit}`;
+      }else{
+        rateLimitInfo.textContent="";
+      }
+    }catch(err){
+      rateLimitInfo.textContent="Rate Limit nicht verfügbar";
     }
-  }catch(err){
-    rateLimitInfo.textContent="Rate Limit nicht verfügbar";
   }
-}
 
-updateRateLimitInfo();
+  updateRateLimitInfo();
 
 async function loadCategories(){
   if(!categorySelect) return;
@@ -216,14 +200,14 @@ $("#btnClear").addEventListener('click', () => {
 function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};}
 async function geocodeSuggest(q){
   // Show suggestions as early as possible; we only guard against
-  // empty strings. When an ORS API key is available we use the
-  // Elasticsearch based geocoder which provides fuzzy matches.
+  // empty strings. Requests go through the backend which proxies
+  // OpenRouteService and falls back to Nominatim if unavailable.
   if(!q||q.length<2) return [];
   if(geocodeCache.has(q)) return geocodeCache.get(q);
 
   let items;
-  if(ORS_APIKEY){
-    const url=`https://api.openrouteservice.org/geocode/autocomplete?api_key=${encodeURIComponent(ORS_APIKEY)}&text=${encodeURIComponent(q)}&boundary.country=DE&size=5`;
+  try{
+    const url=`/ors/geocode/autocomplete?text=${encodeURIComponent(q)}&boundary.country=DE&size=5`;
     const res=await fetch(url,{headers:{"Accept":"application/json"}});
     if(!res.ok) throw new Error("ORS Suggest HTTP "+res.status);
     const data=await res.json();
@@ -232,7 +216,7 @@ async function geocodeSuggest(q){
       lat:f.geometry.coordinates[1],
       lon:f.geometry.coordinates[0]
     }));
-  }else{
+  }catch(_){
     const url=`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&countrycodes=de&q=${encodeURIComponent(q)}`;
     items=await fetchJsonViaProxy(url);
   }
@@ -457,19 +441,17 @@ async function parseListingDetails(html){
 
 async function reversePLZ(postal){
   try{
-    if(ORS_APIKEY){
-      const url=`https://api.openrouteservice.org/geocode/search/structured?api_key=${encodeURIComponent(ORS_APIKEY)}&postalcode=${encodeURIComponent(postal)}&country=DE&size=1`;
-      const res=await fetch(url,{headers:{"Accept":"application/json"}});
-      if(res.ok){
-        const j=await res.json();
-        const f=j?.features?.[0];
-        if(f){
-          const lat=f.geometry.coordinates[1], lon=f.geometry.coordinates[0];
-          const props=f.properties||{};
-          const city=props.locality||props.region||props.name||"";
-          if(city && !/deutschland/i.test(city)){
-            return {lat,lon,display:`${postal}${city?` ${city}`:""}`};
-          }
+    const url=`/ors/geocode/search/structured?postalcode=${encodeURIComponent(postal)}&country=DE&size=1`;
+    const res=await fetch(url,{headers:{"Accept":"application/json"}});
+    if(res.ok){
+      const j=await res.json();
+      const f=j?.features?.[0];
+      if(f){
+        const lat=f.geometry.coordinates[1], lon=f.geometry.coordinates[0];
+        const props=f.properties||{};
+        const city=props.locality||props.region||props.name||"";
+        if(city && !/deutschland/i.test(city)){
+          return {lat,lon,display:`${postal}${city?` ${city}`:""}`};
         }
       }
     }
@@ -490,20 +472,18 @@ async function reversePLZ(postal){
 
 async function geocodeTextOnce(text){
   try{
-    if(ORS_APIKEY){
-      const url=`https://api.openrouteservice.org/geocode/search?api_key=${encodeURIComponent(ORS_APIKEY)}&text=${encodeURIComponent(text)}&boundary.country=DE&size=1`;
-      const j=await fetch(url,{headers:{"Accept":"application/json"}}).then(r=>r.json());
-      const f=j?.features?.[0];
-      if(f){
-        const lat=f.geometry.coordinates[1], lon=f.geometry.coordinates[0];
-        return {lat,lon,label:f.properties.label||text};
-      }
-    }else{
-      const url=`https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=1&countrycodes=de&q=${encodeURIComponent(text)}`;
-      const j=await fetchJsonViaProxy(url);
-      if(j&&j[0]){const a=j[0].address||{};return {lat:+j[0].lat,lon:+j[0].lon,label:cityFromAddr(a)||text};}
+    const url=`/ors/geocode/search?text=${encodeURIComponent(text)}&boundary.country=DE&size=1`;
+    const j=await fetch(url,{headers:{"Accept":"application/json"}}).then(r=>r.json());
+    const f=j?.features?.[0];
+    if(f){
+      const lat=f.geometry.coordinates[1], lon=f.geometry.coordinates[0];
+      return {lat,lon,label:f.properties.label||text};
     }
-  }catch(_){ }
+  }catch(_){
+    const url=`https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=1&countrycodes=de&q=${encodeURIComponent(text)}`;
+    const j=await fetchJsonViaProxy(url);
+    if(j&&j[0]){const a=j[0].address||{};return {lat:+j[0].lat,lon:+j[0].lon,label:cityFromAddr(a)||text};}
+  }
   return {lat:null,lon:null,label:text};
 }
 
@@ -652,8 +632,8 @@ catch(e){
   L.marker(zielLatLng,{icon:redIcon}).addTo(resultMarkers).bindPopup("Ziel");
 
   try{
-    const res=await fetch(`https://api.openrouteservice.org/v2/directions/driving-car/geojson`,{
-      method:"POST",headers:{"Content-Type":"application/json","Authorization":ORS_APIKEY},
+    const res=await fetch(`/ors/v2/directions/driving-car/geojson`,{
+      method:"POST",headers:{"Content-Type":"application/json"},
       body:JSON.stringify({coordinates:[startLL,zielLL]})
     });
     const data=await res.json();
@@ -695,11 +675,11 @@ catch(e){
       let plz=plzCache.get(key);
       if(!plz){
         try{
-          if(ORS_APIKEY){
-            const r=await fetch(`https://api.openrouteservice.org/geocode/reverse?api_key=${encodeURIComponent(ORS_APIKEY)}&point.lon=${lonS}&point.lat=${latS}&size=1`,{headers:{"Accept":"application/json"}});
+          try{
+            const r=await fetch(`/ors/geocode/reverse?point.lon=${lonS}&point.lat=${latS}&size=1`,{headers:{"Accept":"application/json"}});
             const j=await r.json();
             plz=j?.features?.[0]?.properties?.postalcode||null;
-          }
+          }catch(_){ }
         }catch(_){ }
         if(!plz){
           try{

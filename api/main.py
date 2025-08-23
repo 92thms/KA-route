@@ -13,7 +13,9 @@ from pathlib import Path
 from typing import Optional
 import inspect
 
-from fastapi import FastAPI, HTTPException, Response
+import os
+
+from fastapi import FastAPI, HTTPException, Request, Response
 import httpx
 
 
@@ -151,3 +153,32 @@ async def proxy(u: str) -> Response:
 
     content_type = resp.headers.get("content-type", "text/html")
     return Response(content=resp.content, status_code=resp.status_code, media_type=content_type)
+
+
+@app.api_route("/ors/{path:path}", methods=["GET", "POST"])
+async def ors_proxy(path: str, request: Request) -> Response:
+    """Proxy requests to the OpenRouteService API using a server-side API key."""
+
+    api_key = os.getenv("ORS_API_KEY")
+    if not api_key:  # pragma: no cover - configuration issue
+        raise HTTPException(status_code=500, detail="ORS_API_KEY not configured")
+
+    url = f"https://api.openrouteservice.org/{path}"
+    headers = {"Authorization": api_key}
+    if ct := request.headers.get("content-type"):
+        headers["Content-Type"] = ct
+
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.request(
+                request.method,
+                url,
+                params=dict(request.query_params),
+                content=await request.body(),
+                headers=headers,
+            )
+    except Exception as exc:  # pragma: no cover - network issues
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    media_type = resp.headers.get("content-type", "application/json")
+    return Response(content=resp.content, status_code=resp.status_code, media_type=media_type)
