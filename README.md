@@ -9,4 +9,6 @@ Klanavo durchsucht eBay Kleinanzeigen entlang beliebiger Routen. Ein FastAPI-Bac
 
 Optionale Parameter wie SEARCH_RADIUS_KM und STEP_KM lassen sich in `.env` anpassen.
 
+Um einen Wartungsmodus zu aktivieren, können `MAINTENANCE_MODE=1` und ein passender `MAINTENANCE_KEY` in der `.env` gesetzt werden. Ohne gültigen Schlüssel zeigt die Anwendung nur einen Hinweis auf Wartungsarbeiten.
+
 Das Frontend steht anschließend unter http://localhost:8401 bereit.

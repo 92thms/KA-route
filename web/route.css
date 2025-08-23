@@ -10,6 +10,9 @@
   a:hover{color:#d5e2ff;text-decoration:underline}
   .hidden{display:none!important}
 
+  #maintenance{max-width:400px;margin:100px auto;text-align:center}
+  #maintenance input{width:100%;margin:10px 0}
+
   /* Center content with max width */
   .app-header, header, #map-box, #panel{
     max-width:900px;

@@ -1,6 +1,29 @@
 "use strict";
 
 const CONFIG = window.CONFIG || {};
+const MAINTENANCE_MODE = Boolean(CONFIG.MAINTENANCE_MODE);
+const MAINTENANCE_KEY = CONFIG.MAINTENANCE_KEY || "";
+const appEl=document.getElementById("app");
+const maintenanceEl=document.getElementById("maintenance");
+if(MAINTENANCE_MODE && MAINTENANCE_KEY){
+  const saved=localStorage.getItem("maintenanceKey");
+  if(saved===MAINTENANCE_KEY){
+    appEl.classList.remove("hidden");
+  }else{
+    maintenanceEl.classList.remove("hidden");
+    document.getElementById("btnMaintenance").addEventListener("click",()=>{
+      const val=document.getElementById("maintenanceKey").value.trim();
+      if(val===MAINTENANCE_KEY){
+        localStorage.setItem("maintenanceKey",val);
+        maintenanceEl.classList.add("hidden");
+        appEl.classList.remove("hidden");
+      }
+    });
+  }
+}else{
+  appEl.classList.remove("hidden");
+}
+
 const DEFAULT_ORS_APIKEY = CONFIG.ORS_API_KEY || "";
 let ORS_APIKEY = localStorage.getItem("orsApiKey") || DEFAULT_ORS_APIKEY;
 const radiusOptions=[5,10,20];
@@ -513,9 +536,11 @@ async function fetchApiInserate(q, plz, rKm, categoryId, minPrice, maxPrice) {
 
 // ---------- Start/Stop ----------
 let running=false;
+let runCounter=0;
 $("#btnRun").addEventListener("click",()=>{
   if(running){
     running=false;
+    runCounter++;
     setStatus("Suche abgebrochen.", true);
     setProgressState("aborted", "Abgebrochen");
     $("#btnRun").textContent="Route berechnen & suchen";
@@ -532,6 +557,7 @@ $("#btnRun").addEventListener("click",()=>{
 });
 
 async function run(){
+const myRun=++runCounter;
 running=true; $("#btnRun").textContent="Abbrechen";
 startGroup.classList.add("hidden");
 zielGroup.classList.add("hidden");
@@ -617,6 +643,7 @@ catch(e){
     let nextIndex=0;
 
     function progressIncrement(){
+      if(myRun!==runCounter) return;
       done++; setProgress(Math.round(done/samples.length*100));
     }
 
@@ -703,20 +730,24 @@ catch(e){
     }
 
       await Promise.all(Array.from({length:WORKERS},()=>worker()));
-  setStatus("Fertig.");
-  setProgress(100);
-  setProgressState("done", `Fertig – ${totalFound} Inserate`);
-  runGroup.classList.add("hidden");
-  resetGroup.classList.remove("hidden");
+  if(myRun===runCounter){
+    setStatus("Fertig.");
+    setProgress(100);
+    setProgressState("done", `Fertig – ${totalFound} Inserate`);
+    runGroup.classList.add("hidden");
+    resetGroup.classList.remove("hidden");
+  }
 }catch(e){
-  setStatus(e.message,true);
-  setProgressState("aborted","Abgebrochen");
-  startGroup.classList.remove("hidden");
-  zielGroup.classList.remove("hidden");
-  queryGroup.classList.remove("hidden");
-  settingsGroup.classList.remove("hidden");
-  mapBox.classList.add("hidden");
-  resetGroup.classList.remove("hidden");
+  if(myRun===runCounter){
+    setStatus(e.message,true);
+    setProgressState("aborted","Abgebrochen");
+    startGroup.classList.remove("hidden");
+    zielGroup.classList.remove("hidden");
+    queryGroup.classList.remove("hidden");
+    settingsGroup.classList.remove("hidden");
+    mapBox.classList.add("hidden");
+    resetGroup.classList.remove("hidden");
+  }
 }
 running=false; $("#btnRun").textContent="Route berechnen & suchen";
 }

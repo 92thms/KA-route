@@ -8,6 +8,13 @@
 <link rel="stylesheet" href="route.css">
 
 <body>
+<div id="maintenance" class="hidden">
+  <p>Sorry, Wartungsarbeiten (bin am rumfpuschen)</p>
+  <input id="maintenanceKey" type="password" placeholder="Zugangsschlüssel">
+  <button id="btnMaintenance">Weiter</button>
+</div>
+
+<div id="app" class="hidden">
 
 <div class="app-header">
   <h1><img src="klanavo.png" alt="klanavo" class="logo"> klanavo</h1>
@@ -94,6 +101,8 @@
     </svg>
   </a>
 </footer>
+
+</div> <!-- end app -->
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script src="config.js"></script>
