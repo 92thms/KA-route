@@ -20,12 +20,23 @@ async def get_inserate_klaz(
     if min_price is not None or max_price is not None:
         min_price_str = str(min_price) if min_price is not None else ""
         max_price_str = str(max_price) if max_price is not None else ""
-        if category_id is not None:
-            search_path = (
-                f"/s-preis:{min_price_str}:{max_price_str}/c{category_id}/seite:{{page}}"
-            )
+        if location:
+            location_slug = location.replace(" ", "-")
+            if category_id is not None:
+                search_path = (
+                    f"/s-{location_slug}/preis:{min_price_str}:{max_price_str}/c{category_id}/seite:{{page}}"
+                )
+            else:
+                search_path = (
+                    f"/s-{location_slug}/preis:{min_price_str}:{max_price_str}/seite:{{page}}"
+                )
         else:
-            search_path = f"/s-preis:{min_price_str}:{max_price_str}/seite:{{page}}"
+            if category_id is not None:
+                search_path = (
+                    f"/s-preis:{min_price_str}:{max_price_str}/c{category_id}/seite:{{page}}"
+                )
+            else:
+                search_path = f"/s-preis:{min_price_str}:{max_price_str}/seite:{{page}}"
     else:
         if category_id is not None:
             search_path = f"/s-/c{category_id}/seite:{{page}}"
@@ -35,7 +46,7 @@ async def get_inserate_klaz(
     params: dict[str, str] = {}
     if query:
         params["keywords"] = query
-    if location:
+    if location and not (min_price or max_price):
         params["locationStr"] = location
     if radius:
         params["radius"] = str(radius)
