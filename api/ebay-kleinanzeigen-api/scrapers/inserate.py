@@ -17,16 +17,20 @@ async def get_inserate_klaz(
 ):
     base_url = "https://www.kleinanzeigen.de"
 
-    price_path = ""
     if min_price is not None or max_price is not None:
         min_price_str = str(min_price) if min_price is not None else ""
         max_price_str = str(max_price) if max_price is not None else ""
-        price_path = f"/preis:{min_price_str}:{max_price_str}"
-
-    if category_id is not None:
-        search_path = f"{price_path}/s-/c{category_id}/seite:{{page}}"
+        if category_id is not None:
+            search_path = (
+                f"/s-preis:{min_price_str}:{max_price_str}/c{category_id}/seite:{{page}}"
+            )
+        else:
+            search_path = f"/s-preis:{min_price_str}:{max_price_str}/seite:{{page}}"
     else:
-        search_path = f"{price_path}/s-seite:{{page}}"
+        if category_id is not None:
+            search_path = f"/s-/c{category_id}/seite:{{page}}"
+        else:
+            search_path = "/s-seite:{page}"
 
     params: dict[str, str] = {}
     if query:
