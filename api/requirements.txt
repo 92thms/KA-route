@@ -1,3 +1,4 @@
 fastapi
 playwright
 python-multipart
+httpx

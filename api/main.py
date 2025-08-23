@@ -13,7 +13,8 @@ from pathlib import Path
 from typing import Optional
 import inspect
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
+import httpx
 
 
 # Make the bundled ``ebay-kleinanzeigen-api`` package importable.  The
@@ -120,3 +121,33 @@ async def inserate(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     return {"data": results}
+
+
+@app.get("/proxy")
+async def proxy(u: str) -> Response:
+    """Fetch ``u`` and return the raw response body.
+
+    The route acts as a lightweight HTTP proxy used by the front-end to
+    bypass CORS restrictions when fetching external resources such as
+    Nominatim or individual Kleinanzeigen pages.
+    """
+
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+        ),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "de-DE,de;q=0.9",
+        "Referer": "https://www.kleinanzeigen.de/",
+        "Cache-Control": "no-cache",
+    }
+
+    try:
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            resp = await client.get(u, headers=headers)
+    except Exception as exc:  # pragma: no cover - network issues
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    content_type = resp.headers.get("content-type", "text/html")
+    return Response(content=resp.content, status_code=resp.status_code, media_type=content_type)
