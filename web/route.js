@@ -763,10 +763,10 @@ catch(e){
           </a>
           <div class="muted">${escapeHtml(infoLine)}</div>
         `;
-          addResultGalleryGroup(loc, cardHtml);
           if(enrich.lat&&enrich.lon){
             const minDist=routeIdx.distance(enrich.lat,enrich.lon);
             if(minDist<=rKm*1000){
+              addResultGalleryGroup(loc, cardHtml);
               totalFound++;
               const popupHtml=`<a href="${escapeHtml(it.url)}" target="_blank"><strong>${escapeHtml(it.title)}</strong></a><br>${escapeHtml(price)}${catName?`<br>${escapeHtml(catName)}`:''}<br>${escapeHtml(loc)}${enrich.image?`<br><img src="${escapeHtml(enrich.image)}" style="max-width:180px;border-radius:8px">`:''}`;
               addListingToClusters(enrich.lat,enrich.lon,popupHtml,"Anzeigen in der Nähe");
