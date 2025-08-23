@@ -2,8 +2,8 @@
 
 const CONFIG = window.CONFIG || {};
 const ORS_APIKEY = CONFIG.ORS_API_KEY || "";
-const rKm = Number(CONFIG.SEARCH_RADIUS_KM) || 10;
-const stepKm = Number(CONFIG.STEP_KM) || 50;
+let rKm = Number(CONFIG.SEARCH_RADIUS_KM) || 10;
+let stepKm = Number(CONFIG.STEP_KM) || 50;
 const NOMINATIM_HEADERS = { "Accept":"application/json", "Accept-Language":"de" };
 const geocodeCache = new Map();
 
@@ -25,7 +25,10 @@ const resultMarkers = L.layerGroup().addTo(map);
 
 // Shorthands
 const $=sel=>document.querySelector(sel);
-const startGroup=$("#grpStart"), zielGroup=$("#grpZiel"), queryGroup=$("#grpQuery"), runGroup=$("#grpRun"), resetGroup=$("#grpReset"), mapBox=$("#map-box"), resultsBox=$("#results");
+const startGroup=$("#grpStart"), zielGroup=$("#grpZiel"), queryGroup=$("#grpQuery"), settingsGroup=$("#grpSettings"), runGroup=$("#grpRun"), resetGroup=$("#grpReset"), mapBox=$("#map-box"), resultsBox=$("#results");
+const radiusInput=$("#radius"), stepInput=$("#step");
+radiusInput.value=rKm;
+stepInput.value=stepKm;
 // Progress-Helfer
 function setProgress(pct){
   const bar = $("#progressBar"), txt = $("#progressText");
@@ -428,6 +431,7 @@ $("#btnRun").addEventListener("click",()=>{
     startGroup.classList.remove("hidden");
     zielGroup.classList.remove("hidden");
     queryGroup.classList.remove("hidden");
+    settingsGroup.classList.remove("hidden");
     mapBox.classList.add("hidden");
   } else {
     run();
@@ -439,6 +443,7 @@ running=true; $("#btnRun").textContent="Abbrechen";
 startGroup.classList.add("hidden");
 zielGroup.classList.add("hidden");
 queryGroup.classList.add("hidden");
+settingsGroup.classList.add("hidden");
 mapBox.classList.remove("hidden");
 $("#results").classList.remove("hidden");
 map.invalidateSize();
@@ -447,6 +452,8 @@ setProgressState("active");           // animierte Streifen an
 setProgress(0);
 let totalFound = 0;                   // Trefferzähler für "Fertig"-Text
 const q=$("#query").value.trim();
+rKm = Number(radiusInput.value) || rKm;
+stepKm = Number(stepInput.value) || stepKm;
 
   // Geocode Inputs
   async function getLonLatFromInput(inp){
@@ -466,6 +473,7 @@ catch(e){
   startGroup.classList.remove("hidden");
   zielGroup.classList.remove("hidden");
   queryGroup.classList.remove("hidden");
+  settingsGroup.classList.remove("hidden");
   mapBox.classList.add("hidden");
   return;
 }
@@ -594,6 +602,7 @@ catch(e){
   startGroup.classList.remove("hidden");
   zielGroup.classList.remove("hidden");
   queryGroup.classList.remove("hidden");
+  settingsGroup.classList.remove("hidden");
   mapBox.classList.add("hidden");
   resetGroup.classList.remove("hidden");
 }

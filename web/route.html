@@ -29,6 +29,15 @@
     <label for="query">Suchbegriff</label>
     <input id="query" placeholder="Suchbegriff">
   </div>
+  <div class="group" id="grpSettings">
+    <details>
+      <summary>⚙ Einstellungen</summary>
+      <label for="radius" title="Umkreis der Suche">Suchradius (km)</label>
+      <input id="radius" type="number" min="1" step="1" value="10" title="Umkreis der Suche">
+      <label for="step" title="Abstand zwischen Wegpunkten">Punktabstand (km)</label>
+      <input id="step" type="number" min="1" step="1" value="50" title="Abstand zwischen Wegpunkten">
+    </details>
+  </div>
   <div class="group" id="grpRun">
     <label>&nbsp;</label>
     <button id="btnRun">Route berechnen &amp; suchen</button>
