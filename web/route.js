@@ -28,8 +28,8 @@ const resultMarkers = L.layerGroup().addTo(map);
 
 // Shorthands
 const $=sel=>document.querySelector(sel);
-const startGroup=$("#grpStart"), zielGroup=$("#grpZiel"), queryGroup=$("#grpQuery"), settingsGroup=$("#grpSettings"), runGroup=$("#grpRun"), resetGroup=$("#grpReset"), mapBox=$("#map-box"), resultsBox=$("#results");
-const radiusInput=$("#radius"), stepInput=$("#step"), radiusVal=$("#radiusVal"), stepVal=$("#stepVal"), apiKeyInput=$("#apiKey"), rateLimitInfo=$("#rateLimitInfo");
+const startGroup=$("#grpStart"), zielGroup=$("#grpZiel"), queryGroup=$("#grpQuery"), categoryGroup=$("#grpCategory"), priceGroup=$("#grpPrice"), settingsGroup=$("#grpSettings"), runGroup=$("#grpRun"), resetGroup=$("#grpReset"), mapBox=$("#map-box"), resultsBox=$("#results");
+const radiusInput=$("#radius"), stepInput=$("#step"), radiusVal=$("#radiusVal"), stepVal=$("#stepVal"), apiKeyInput=$("#apiKey"), rateLimitInfo=$("#rateLimitInfo"), categorySelect=$("#category"), priceMinInput=$("#priceMin"), priceMaxInput=$("#priceMax");
 const radiusIdx=radiusOptions.indexOf(rKm);
 radiusInput.value=radiusIdx>=0?radiusIdx:1;
 radiusVal.textContent=radiusOptions[radiusInput.value];
@@ -69,6 +69,23 @@ async function updateRateLimitInfo(){
 }
 
 updateRateLimitInfo();
+
+async function loadCategories(){
+  if(!categorySelect) return;
+  categorySelect.innerHTML='<option value="">Alle Kategorien</option>';
+  try{
+    const cats=await fetch('categories.json').then(r=>r.json());
+    cats.forEach(c=>{
+      const opt=document.createElement('option');
+      opt.value=c.id;
+      opt.textContent=c.name;
+      categorySelect.appendChild(opt);
+    });
+  }catch(err){
+    console.error('Kategorien konnten nicht geladen werden', err);
+  }
+}
+loadCategories();
 // Progress-Helfer
 function setProgress(pct){
   const bar = $("#progressBar"), txt = $("#progressText");
@@ -423,11 +440,15 @@ const blueIcon=L.icon({iconUrl:"https://maps.google.com/mapfiles/ms/icons/blue-d
 const redIcon=L.icon({iconUrl:"https://maps.google.com/mapfiles/ms/icons/red-dot.png",iconSize:[32,32],iconAnchor:[16,32]});
 
 // ---------- ROBUSTER MOBILE-FETCH FÜR /api/inserate ----------
-async function fetchApiInserate(q, plz, rKm) {
-  const params = `query=${encodeURIComponent(q)}&location=${encodeURIComponent(plz)}&radius=${rKm}`;
-  const tries = [
-    `${window.location.origin}/api/inserate?${params}`,
-    `/api/inserate?${params}`
+async function fetchApiInserate(q, plz, rKm, categoryId, minPrice, maxPrice) {
+  const params=new URLSearchParams({query:q,location:plz,radius:rKm});
+  if(categoryId) params.append('category_id', categoryId);
+  if(minPrice) params.append('min_price', minPrice);
+  if(maxPrice) params.append('max_price', maxPrice);
+  const paramStr=params.toString();
+  const tries=[
+    `${window.location.origin}/api/inserate?${paramStr}`,
+    `/api/inserate?${paramStr}`
   ];
 
   async function tryOnce(url, useMode) {
@@ -471,6 +492,8 @@ $("#btnRun").addEventListener("click",()=>{
     startGroup.classList.remove("hidden");
     zielGroup.classList.remove("hidden");
     queryGroup.classList.remove("hidden");
+    categoryGroup.classList.remove("hidden");
+    priceGroup.classList.remove("hidden");
     settingsGroup.classList.remove("hidden");
     mapBox.classList.add("hidden");
   } else {
@@ -483,6 +506,8 @@ running=true; $("#btnRun").textContent="Abbrechen";
 startGroup.classList.add("hidden");
 zielGroup.classList.add("hidden");
 queryGroup.classList.add("hidden");
+categoryGroup.classList.add("hidden");
+priceGroup.classList.add("hidden");
 settingsGroup.classList.add("hidden");
 mapBox.classList.remove("hidden");
 $("#results").classList.remove("hidden");
@@ -492,6 +517,9 @@ setProgressState("active");           // animierte Streifen an
 setProgress(0);
 let totalFound = 0;                   // Trefferzähler für "Fertig"-Text
 const q=$("#query").value.trim();
+  const categoryId=categorySelect.value;
+  const minPrice=priceMinInput.value.trim();
+  const maxPrice=priceMaxInput.value.trim();
   rKm = radiusOptions[Number(radiusInput.value)] || rKm;
   stepKm = stepOptions[Number(stepInput.value)] || stepKm;
 
@@ -576,7 +604,7 @@ catch(e){
       let items=inserateCache.get(plz);
       if(!items){
         try{
-          const j=await fetchApiInserate(q,plz,rKm);
+          const j=await fetchApiInserate(q,plz,rKm,categoryId,minPrice,maxPrice);
           items=j?.data||[];
           inserateCache.set(plz,items);
         }catch(e){

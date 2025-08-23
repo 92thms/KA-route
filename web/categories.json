@@ -1,0 +1,626 @@
+[
+  {
+    "id": 210,
+    "name": "Auto, Rad & Boot"
+  },
+  {
+    "id": 216,
+    "name": "Autos"
+  },
+  {
+    "id": 223,
+    "name": "Autoteile & Reifen"
+  },
+  {
+    "id": 211,
+    "name": "Boote & Bootszubehör"
+  },
+  {
+    "id": 217,
+    "name": "Fahrräder & Zubehör"
+  },
+  {
+    "id": 305,
+    "name": "Motorräder & Motorroller"
+  },
+  {
+    "id": 306,
+    "name": "Motorradteile & Zubehör"
+  },
+  {
+    "id": 276,
+    "name": "Nutzfahrzeuge & Anhänger"
+  },
+  {
+    "id": 280,
+    "name": "Reparaturen & Dienstleistungen"
+  },
+  {
+    "id": 220,
+    "name": "Wohnwagen & -mobile"
+  },
+  {
+    "id": 241,
+    "name": "Weiteres Auto, Rad & Boot"
+  },
+  {
+    "id": 161,
+    "name": "Elektronik"
+  },
+  {
+    "id": 172,
+    "name": "Audio & Hifi"
+  },
+  {
+    "id": 226,
+    "name": "Dienstleistungen Elektronik"
+  },
+  {
+    "id": 245,
+    "name": "Foto"
+  },
+  {
+    "id": 173,
+    "name": "Handy & Telefon"
+  },
+  {
+    "id": 176,
+    "name": "Haushaltsgeräte"
+  },
+  {
+    "id": 279,
+    "name": "Konsolen"
+  },
+  {
+    "id": 278,
+    "name": "Notebooks"
+  },
+  {
+    "id": 228,
+    "name": "PCs"
+  },
+  {
+    "id": 225,
+    "name": "PC-Zubehör & Software"
+  },
+  {
+    "id": 285,
+    "name": "Tablets & Reader"
+  },
+  {
+    "id": 175,
+    "name": "TV & Video"
+  },
+  {
+    "id": 227,
+    "name": "Videospiele"
+  },
+  {
+    "id": 168,
+    "name": "Weitere Elektronik"
+  },
+  {
+    "id": 80,
+    "name": "Haus & Garten"
+  },
+  {
+    "id": 91,
+    "name": "Badezimmer"
+  },
+  {
+    "id": 93,
+    "name": "Büro"
+  },
+  {
+    "id": 246,
+    "name": "Dekoration"
+  },
+  {
+    "id": 239,
+    "name": "Dienstleistungen Haus & Garten"
+  },
+  {
+    "id": 89,
+    "name": "Gartenzubehör & Pflanzen"
+  },
+  {
+    "id": 90,
+    "name": "Heimtextilien"
+  },
+  {
+    "id": 84,
+    "name": "Heimwerken"
+  },
+  {
+    "id": 86,
+    "name": "Küche & Esszimmer"
+  },
+  {
+    "id": 82,
+    "name": "Lampen & Licht"
+  },
+  {
+    "id": 81,
+    "name": "Schlafzimmer"
+  },
+  {
+    "id": 88,
+    "name": "Wohnzimmer"
+  },
+  {
+    "id": 87,
+    "name": "Weiteres Haus & Garten"
+  },
+  {
+    "id": 102,
+    "name": "Jobs"
+  },
+  {
+    "id": 118,
+    "name": "Ausbildung"
+  },
+  {
+    "id": 111,
+    "name": "Bau, Handwerk & Produktion"
+  },
+  {
+    "id": 114,
+    "name": "Büroarbeit & Verwaltung"
+  },
+  {
+    "id": 110,
+    "name": "Gastronomie & Tourismus"
+  },
+  {
+    "id": 105,
+    "name": "Kundenservice & Call Center"
+  },
+  {
+    "id": 107,
+    "name": "Mini- & Nebenjobs"
+  },
+  {
+    "id": 125,
+    "name": "Praktika"
+  },
+  {
+    "id": 123,
+    "name": "Sozialer Sektor & Pflege"
+  },
+  {
+    "id": 247,
+    "name": "Transport, Logistik & Verkehr"
+  },
+  {
+    "id": 117,
+    "name": "Vertrieb, Einkauf & Verkauf"
+  },
+  {
+    "id": 109,
+    "name": "Weitere Jobs"
+  },
+  {
+    "id": 400,
+    "name": "Nachbarschaftshilfe"
+  },
+  {
+    "id": 401,
+    "name": "Nachbarschaftshilfe"
+  },
+  {
+    "id": 297,
+    "name": "Dienstleistungen"
+  },
+  {
+    "id": 288,
+    "name": "Altenpflege"
+  },
+  {
+    "id": 289,
+    "name": "Auto, Rad & Boot"
+  },
+  {
+    "id": 290,
+    "name": "Babysitter/-in & Kinderbetreuung"
+  },
+  {
+    "id": 293,
+    "name": "Elektronik"
+  },
+  {
+    "id": 291,
+    "name": "Haus & Garten"
+  },
+  {
+    "id": 292,
+    "name": "Künstler/-in & Musiker/-in"
+  },
+  {
+    "id": 294,
+    "name": "Reise & Event"
+  },
+  {
+    "id": 295,
+    "name": "Tierbetreuung & Training"
+  },
+  {
+    "id": 296,
+    "name": "Umzug & Transport"
+  },
+  {
+    "id": 298,
+    "name": "Weitere Dienstleistungen"
+  },
+  {
+    "id": 17,
+    "name": "Familie, Kind & Baby"
+  },
+  {
+    "id": 236,
+    "name": "Altenpflege"
+  },
+  {
+    "id": 22,
+    "name": "Baby- & Kinderkleidung"
+  },
+  {
+    "id": 19,
+    "name": "Baby- & Kinderschuhe"
+  },
+  {
+    "id": 258,
+    "name": "Baby-Ausstattung"
+  },
+  {
+    "id": 21,
+    "name": "Babyschalen & Kindersitze"
+  },
+  {
+    "id": 237,
+    "name": "Babysitter/-in & Kinderbetreuung"
+  },
+  {
+    "id": 25,
+    "name": "Kinderwagen & Buggys"
+  },
+  {
+    "id": 20,
+    "name": "Kinderzimmermöbel"
+  },
+  {
+    "id": 23,
+    "name": "Spielzeug"
+  },
+  {
+    "id": 18,
+    "name": "Weiteres Familie, Kind & Baby"
+  },
+  {
+    "id": 130,
+    "name": "Haustiere"
+  },
+  {
+    "id": 138,
+    "name": "Fische"
+  },
+  {
+    "id": 134,
+    "name": "Hunde"
+  },
+  {
+    "id": 136,
+    "name": "Katzen"
+  },
+  {
+    "id": 132,
+    "name": "Kleintiere"
+  },
+  {
+    "id": 135,
+    "name": "Nutztiere"
+  },
+  {
+    "id": 139,
+    "name": "Pferde"
+  },
+  {
+    "id": 133,
+    "name": "Tierbetreuung & Training"
+  },
+  {
+    "id": 283,
+    "name": "Vermisste Tiere"
+  },
+  {
+    "id": 243,
+    "name": "Vögel"
+  },
+  {
+    "id": 313,
+    "name": "Zubehör"
+  },
+  {
+    "id": 153,
+    "name": "Mode & Beauty"
+  },
+  {
+    "id": 224,
+    "name": "Beauty & Gesundheit"
+  },
+  {
+    "id": 154,
+    "name": "Damenbekleidung"
+  },
+  {
+    "id": 159,
+    "name": "Damenschuhe"
+  },
+  {
+    "id": 160,
+    "name": "Herrenbekleidung"
+  },
+  {
+    "id": 158,
+    "name": "Herrenschuhe"
+  },
+  {
+    "id": 156,
+    "name": "Taschen & Accessoires"
+  },
+  {
+    "id": 157,
+    "name": "Uhren & Schmuck"
+  },
+  {
+    "id": 155,
+    "name": "Weiteres Mode & Beauty"
+  },
+  {
+    "id": 235,
+    "name": "Unterricht & Kurse"
+  },
+  {
+    "id": 269,
+    "name": "Beauty & Gesundheit"
+  },
+  {
+    "id": 260,
+    "name": "Computerkurse"
+  },
+  {
+    "id": 265,
+    "name": "Esoterik & Spirituelles"
+  },
+  {
+    "id": 263,
+    "name": "Kochen & Backen"
+  },
+  {
+    "id": 264,
+    "name": "Kunst & Gestaltung"
+  },
+  {
+    "id": 262,
+    "name": "Musik & Gesang"
+  },
+  {
+    "id": 268,
+    "name": "Nachhilfe"
+  },
+  {
+    "id": 261,
+    "name": "Sportkurse"
+  },
+  {
+    "id": 271,
+    "name": "Sprachkurse"
+  },
+  {
+    "id": 267,
+    "name": "Tanzkurse"
+  },
+  {
+    "id": 266,
+    "name": "Weiterbildung"
+  },
+  {
+    "id": 270,
+    "name": "Weitere Unterricht & Kurse"
+  },
+  {
+    "id": 231,
+    "name": "Eintrittskarten & Tickets"
+  },
+  {
+    "id": 286,
+    "name": "Bahn & ÖPNV"
+  },
+  {
+    "id": 254,
+    "name": "Comedy & Kabarett"
+  },
+  {
+    "id": 287,
+    "name": "Gutscheine"
+  },
+  {
+    "id": 252,
+    "name": "Kinder"
+  },
+  {
+    "id": 255,
+    "name": "Konzerte"
+  },
+  {
+    "id": 257,
+    "name": "Sport"
+  },
+  {
+    "id": 251,
+    "name": "Theater & Musical"
+  },
+  {
+    "id": 256,
+    "name": "Weitere Eintrittskarten & Tickets"
+  },
+  {
+    "id": 185,
+    "name": "Freizeit, Hobby & Nachbarschaft"
+  },
+  {
+    "id": 232,
+    "name": "Esoterik & Spirituelles"
+  },
+  {
+    "id": 248,
+    "name": "Essen & Trinken"
+  },
+  {
+    "id": 187,
+    "name": "Freizeitaktivitäten"
+  },
+  {
+    "id": 282,
+    "name": "Handarbeit, Basteln & Kunsthandwerk"
+  },
+  {
+    "id": 240,
+    "name": "Kunst & Antiquitäten"
+  },
+  {
+    "id": 191,
+    "name": "Künstler/-in & Musiker/-in"
+  },
+  {
+    "id": 249,
+    "name": "Modellbau"
+  },
+  {
+    "id": 233,
+    "name": "Reise & Eventservices"
+  },
+  {
+    "id": 234,
+    "name": "Sammeln"
+  },
+  {
+    "id": 230,
+    "name": "Sport & Camping"
+  },
+  {
+    "id": 250,
+    "name": "Trödel"
+  },
+  {
+    "id": 189,
+    "name": "Verloren & Gefunden"
+  },
+  {
+    "id": 242,
+    "name": "Weiteres Freizeit, Hobby & Nachbarschaft"
+  },
+  {
+    "id": 195,
+    "name": "Immobilien"
+  },
+  {
+    "id": 199,
+    "name": "Auf Zeit & WG"
+  },
+  {
+    "id": 402,
+    "name": "Container"
+  },
+  {
+    "id": 196,
+    "name": "Eigentumswohnungen"
+  },
+  {
+    "id": 275,
+    "name": "Ferien- & Auslandsimmobilien"
+  },
+  {
+    "id": 197,
+    "name": "Garagen & Stellplätze"
+  },
+  {
+    "id": 277,
+    "name": "Gewerbeimmobilien"
+  },
+  {
+    "id": 207,
+    "name": "Grundstücke & Gärten"
+  },
+  {
+    "id": 208,
+    "name": "Häuser zum Kauf"
+  },
+  {
+    "id": 205,
+    "name": "Häuser zur Miete"
+  },
+  {
+    "id": 203,
+    "name": "Mietwohnungen"
+  },
+  {
+    "id": 238,
+    "name": "Umzug & Transport"
+  },
+  {
+    "id": 198,
+    "name": "Weitere Immobilien"
+  },
+  {
+    "id": 73,
+    "name": "Musik, Filme & Bücher"
+  },
+  {
+    "id": 76,
+    "name": "Bücher & Zeitschriften"
+  },
+  {
+    "id": 281,
+    "name": "Büro & Schreibwaren"
+  },
+  {
+    "id": 284,
+    "name": "Comics"
+  },
+  {
+    "id": 77,
+    "name": "Fachbücher, Schule & Studium"
+  },
+  {
+    "id": 79,
+    "name": "Film & DVD"
+  },
+  {
+    "id": 78,
+    "name": "Musik & CDs"
+  },
+  {
+    "id": 74,
+    "name": "Musikinstrumente"
+  },
+  {
+    "id": 75,
+    "name": "Weitere Musik, Filme & Bücher"
+  },
+  {
+    "id": 272,
+    "name": "Verschenken & Tauschen"
+  },
+  {
+    "id": 273,
+    "name": "Tauschen"
+  },
+  {
+    "id": 274,
+    "name": "Verleihen"
+  },
+  {
+    "id": 192,
+    "name": "Verschenken"
+  }
+]

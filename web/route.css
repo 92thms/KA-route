@@ -48,6 +48,8 @@
     border:1px solid var(--border);border-radius:10px
   }
   header .group{display:flex;flex-direction:column;gap:4px;flex:1;min-width:240px}
+  header .group .price-range{display:flex;gap:4px}
+  header .group .price-range input{flex:1}
   #grpSettings,#grpRun{flex:1 1 100%}
   #grpSettings details{display:flex;flex-direction:column;gap:4px;width:100%}
   #grpSettings summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:4px;font-weight:700}
