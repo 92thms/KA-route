@@ -86,7 +86,6 @@ async def inserate(
     query: str,
     location: str,
     radius: int = 10,
-    category_id: Optional[int] = None,
     min_price: Optional[int] = None,
     max_price: Optional[int] = None,
     page_count: int = 1,
@@ -101,8 +100,6 @@ async def inserate(
         Postal code used as search origin.
     radius:
         Search radius in kilometres. Defaults to ``10``.
-    category_id:
-        Optional numeric category identifier used by Kleinanzeigen.
     min_price, max_price:
         Optional price filters in Euro.
     page_count:
@@ -129,8 +126,6 @@ async def inserate(
         kwargs["location"] = location
         if "radius" in params:
             kwargs["radius"] = radius
-        if "category_id" in params and category_id is not None:
-            kwargs["category_id"] = category_id
         if "min_price" in params and min_price is not None:
             kwargs["min_price"] = min_price
         if "max_price" in params and max_price is not None:

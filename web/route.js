@@ -32,7 +32,8 @@ let stepKm = Number(CONFIG.STEP_KM) || 10;
 // Alle Nominatim-Anfragen werden über einen Proxy geleitet,
 // daher sind keine speziellen Header mehr nötig.
 const geocodeCache = new Map();
-const categoryMap = {};
+// Kategorien vorerst deaktiviert
+// const categoryMap = {};
 
 function escapeHtml(str){
   return String(str).replace(/[&<>"']/g, s => ({
@@ -52,8 +53,8 @@ const resultMarkers = L.layerGroup().addTo(map);
 
 // Shorthands
 const $=sel=>document.querySelector(sel);
-const startGroup=$("#grpStart"), zielGroup=$("#grpZiel"), queryGroup=$("#grpQuery"), categoryGroup=$("#grpCategory"), priceGroup=$("#grpPrice"), settingsGroup=$("#grpSettings"), runGroup=$("#grpRun"), resetGroup=$("#grpReset"), mapBox=$("#map-box"), resultsBox=$("#results");
-const radiusInput=$("#radius"), stepInput=$("#step"), radiusVal=$("#radiusVal"), stepVal=$("#stepVal"), rateLimitInfo=$("#rateLimitInfo"), categorySelect=$("#category"), priceMinInput=$("#priceMin"), priceMaxInput=$("#priceMax");
+const startGroup=$("#grpStart"), zielGroup=$("#grpZiel"), queryGroup=$("#grpQuery"), priceGroup=$("#grpPrice"), settingsGroup=$("#grpSettings"), runGroup=$("#grpRun"), resetGroup=$("#grpReset"), mapBox=$("#map-box"), resultsBox=$("#results");
+const radiusInput=$("#radius"), stepInput=$("#step"), radiusVal=$("#radiusVal"), stepVal=$("#stepVal"), rateLimitInfo=$("#rateLimitInfo"), priceMinInput=$("#priceMin"), priceMaxInput=$("#priceMax");
 const radiusIdx=radiusOptions.indexOf(rKm);
 radiusInput.value=radiusIdx>=0?radiusIdx:1;
 radiusVal.textContent=radiusOptions[radiusInput.value];
@@ -80,6 +81,7 @@ async function updateRateLimitInfo(){
 
   updateRateLimitInfo();
 
+/* Kategorien-Funktion vorerst deaktiviert
 async function loadCategories(){
   if(!categorySelect) return;
   categorySelect.innerHTML='<option value="">Alle Kategorien</option>';
@@ -102,6 +104,7 @@ function extractCategoryId(url){
   const m=url.match(/(\d+)-(\d+)(?:-\d+)?\.html?$/);
   return m?m[2]:null;
 }
+*/
 // Progress-Helfer
 function setProgress(pct){
   const bar = $("#progressBar"), txt = $("#progressText");
@@ -178,7 +181,6 @@ $("#btnReset").addEventListener('click', () => {
   startGroup.classList.remove("hidden");
   zielGroup.classList.remove("hidden");
   queryGroup.classList.remove("hidden");
-  categoryGroup.classList.remove("hidden");
   priceGroup.classList.remove("hidden");
   settingsGroup.classList.remove("hidden");
   mapBox.classList.add("hidden");
@@ -194,7 +196,6 @@ $("#btnClear").addEventListener('click', () => {
     const el=document.getElementById(id);
     if(el){ el.value=''; delete el.dataset.lat; delete el.dataset.lon; }
   });
-  categorySelect.value='';
 });
 
 // -------- Debounce & Autocomplete (auf DE beschränkt) --------
@@ -516,9 +517,8 @@ const blueIcon=L.icon({iconUrl:"https://maps.google.com/mapfiles/ms/icons/blue-d
 const redIcon=L.icon({iconUrl:"https://maps.google.com/mapfiles/ms/icons/red-dot.png",iconSize:[32,32],iconAnchor:[16,32]});
 
 // ---------- ROBUSTER MOBILE-FETCH FÜR /api/inserate ----------
-async function fetchApiInserate(q, plz, rKm, categoryId, minPrice, maxPrice) {
+async function fetchApiInserate(q, plz, rKm, minPrice, maxPrice) {
   const params=new URLSearchParams({query:q,location:plz,radius:rKm});
-  if(categoryId) params.append('category_id', categoryId);
   if(minPrice !== null && !Number.isNaN(minPrice)) params.append('min_price', String(minPrice));
   if(maxPrice !== null && !Number.isNaN(maxPrice)) params.append('max_price', String(maxPrice));
   const paramStr=params.toString();
@@ -570,7 +570,6 @@ $("#btnRun").addEventListener("click",()=>{
     startGroup.classList.remove("hidden");
     zielGroup.classList.remove("hidden");
     queryGroup.classList.remove("hidden");
-    categoryGroup.classList.remove("hidden");
     priceGroup.classList.remove("hidden");
     settingsGroup.classList.remove("hidden");
   } else {
@@ -584,7 +583,6 @@ running=true; $("#btnRun").textContent="Abbrechen";
 startGroup.classList.add("hidden");
 zielGroup.classList.add("hidden");
 queryGroup.classList.add("hidden");
-categoryGroup.classList.add("hidden");
 priceGroup.classList.add("hidden");
 settingsGroup.classList.add("hidden");
 mapBox.classList.remove("hidden");
@@ -595,7 +593,6 @@ setProgressState("active");           // animierte Streifen an
 setProgress(0);
 let totalFound = 0;                   // Trefferzähler für "Fertig"-Text
 const q=$("#query").value.trim();
-  const categoryId=categorySelect.value||null;
   const minPriceRaw=priceMinInput.value.trim();
   const maxPriceRaw=priceMaxInput.value.trim();
   const minPrice=minPriceRaw===""?null:Number(minPriceRaw);
@@ -738,7 +735,7 @@ catch(e){
       let items=inserateCache.get(plz);
       if(!items){
         try{
-          const j=await fetchApiInserate(q,plz,rKm,categoryId,minPrice,maxPrice);
+          const j=await fetchApiInserate(q,plz,rKm,minPrice,maxPrice);
           items=j?.data||[];
           inserateCache.set(plz,items);
         }catch(e){
@@ -747,9 +744,6 @@ catch(e){
         }
       }
       if(myRun!==runCounter) return;
-      if(categoryId){
-        items=items.filter(it=>extractCategoryId(it.url)===String(categoryId));
-      }
       if(minPrice!==null){
         items=items.filter(it=>Number(it.price)>=minPrice);
       }
@@ -776,9 +770,7 @@ catch(e){
           const it=chunk[idx];
           const loc=enrich.label||plz||"?";
           const price=enrich.price;
-          const catId=extractCategoryId(it.url);
-          const catName=catId?categoryMap[catId]||"":"";
-          const infoLine=[price,catName].filter(Boolean).join(" • ");
+          const infoLine=price;
           const cardHtml=`
           <a href="${escapeHtml(it.url)}" target="_blank" rel="noopener">
             ${enrich.image?`<img src="${escapeHtml(enrich.image)}" alt="">`:''}
@@ -791,7 +783,7 @@ catch(e){
             if(minDist<=rKm*1000){
               addResultGalleryGroup(loc, cardHtml);
               totalFound++;
-              const popupHtml=`<a href="${escapeHtml(it.url)}" target="_blank"><strong>${escapeHtml(it.title)}</strong></a><br>${escapeHtml(price)}${catName?`<br>${escapeHtml(catName)}`:''}<br>${escapeHtml(loc)}${enrich.image?`<br><img src="${escapeHtml(enrich.image)}" style="max-width:180px;border-radius:8px">`:''}`;
+              const popupHtml=`<a href="${escapeHtml(it.url)}" target="_blank"><strong>${escapeHtml(it.title)}</strong></a><br>${escapeHtml(price)}<br>${escapeHtml(loc)}${enrich.image?`<br><img src="${escapeHtml(enrich.image)}" style="max-width:180px;border-radius:8px">`:''}`;
               addListingToClusters(enrich.lat,enrich.lon,popupHtml,"Anzeigen in der Nähe");
             }
           }
