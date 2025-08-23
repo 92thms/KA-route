@@ -1,7 +1,8 @@
 "use strict";
 
 const CONFIG = window.CONFIG || {};
-const ORS_APIKEY = CONFIG.ORS_API_KEY || "";
+const DEFAULT_ORS_APIKEY = CONFIG.ORS_API_KEY || "";
+let ORS_APIKEY = localStorage.getItem("orsApiKey") || DEFAULT_ORS_APIKEY;
 const radiusOptions=[5,10,20];
 const stepOptions=[5,10,20];
 let rKm = Number(CONFIG.SEARCH_RADIUS_KM) || 10;
@@ -28,7 +29,7 @@ const resultMarkers = L.layerGroup().addTo(map);
 // Shorthands
 const $=sel=>document.querySelector(sel);
 const startGroup=$("#grpStart"), zielGroup=$("#grpZiel"), queryGroup=$("#grpQuery"), settingsGroup=$("#grpSettings"), runGroup=$("#grpRun"), resetGroup=$("#grpReset"), mapBox=$("#map-box"), resultsBox=$("#results");
-const radiusInput=$("#radius"), stepInput=$("#step"), radiusVal=$("#radiusVal"), stepVal=$("#stepVal");
+const radiusInput=$("#radius"), stepInput=$("#step"), radiusVal=$("#radiusVal"), stepVal=$("#stepVal"), apiKeyInput=$("#apiKey"), rateLimitInfo=$("#rateLimitInfo");
 const radiusIdx=radiusOptions.indexOf(rKm);
 radiusInput.value=radiusIdx>=0?radiusIdx:1;
 radiusVal.textContent=radiusOptions[radiusInput.value];
@@ -37,6 +38,37 @@ stepInput.value=stepIdx>=0?stepIdx:1;
 stepVal.textContent=stepOptions[stepInput.value];
 radiusInput.addEventListener('input',()=>radiusVal.textContent=radiusOptions[radiusInput.value]);
 stepInput.addEventListener('input',()=>stepVal.textContent=stepOptions[stepInput.value]);
+
+apiKeyInput.value = localStorage.getItem("orsApiKey") || "";
+apiKeyInput.addEventListener("change", () => {
+  const val = apiKeyInput.value.trim();
+  if(val){
+    ORS_APIKEY = val;
+    localStorage.setItem("orsApiKey", val);
+  }else{
+    ORS_APIKEY = DEFAULT_ORS_APIKEY;
+    localStorage.removeItem("orsApiKey");
+  }
+  updateRateLimitInfo();
+});
+
+async function updateRateLimitInfo(){
+  if(!ORS_APIKEY){ rateLimitInfo.textContent=""; return; }
+  try{
+    const res=await fetch(`https://api.openrouteservice.org/geocode/autocomplete?api_key=${encodeURIComponent(ORS_APIKEY)}&text=Berlin&boundary.country=DE&size=1`,{headers:{"Accept":"application/json"}});
+    const limit=res.headers.get("x-ratelimit-limit");
+    const remain=res.headers.get("x-ratelimit-remaining");
+    if(limit&&remain){
+      rateLimitInfo.textContent=`Rate Limit: ${remain}/${limit}`;
+    }else{
+      rateLimitInfo.textContent="";
+    }
+  }catch(err){
+    rateLimitInfo.textContent="Rate Limit nicht verfügbar";
+  }
+}
+
+updateRateLimitInfo();
 // Progress-Helfer
 function setProgress(pct){
   const bar = $("#progressBar"), txt = $("#progressText");
