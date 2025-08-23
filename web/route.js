@@ -689,6 +689,7 @@ catch(e){
     }
 
     async function processSample(idx){
+      if(myRun!==runCounter) return;
       const [lonS,latS]=samples[idx];
       const key=latS.toFixed(3)+"|"+lonS.toFixed(3);
       let plz=plzCache.get(key);
@@ -710,6 +711,7 @@ catch(e){
       }
       if(!plz){ progressIncrement(); return; }
 
+      if(myRun!==runCounter) return;
       let items=inserateCache.get(plz);
       if(!items){
         try{
@@ -721,6 +723,7 @@ catch(e){
           items=[];
         }
       }
+      if(myRun!==runCounter) return;
       if(categoryId){
         items=items.filter(it=>extractCategoryId(it.url)===String(categoryId));
       }
@@ -730,6 +733,7 @@ catch(e){
       if(maxPrice!==null){
         items=items.filter(it=>Number(it.price)<=maxPrice);
       }
+      if(myRun!==runCounter) return;
       setStatus(`PLZ ${plz}: ${items.length} Treffer`);
 
       const fresh=[];
@@ -739,6 +743,7 @@ catch(e){
         if(fresh.length>=DETAIL_LIMIT) break;
       }
 
+      if(myRun!==runCounter) return;
       for(let i=0;i<fresh.length;i+=DETAIL_PAR){
         const chunk=fresh.slice(i,i+DETAIL_PAR);
         const results=await Promise.allSettled(chunk.map(it=>enrichListing(it,true)));
@@ -774,7 +779,7 @@ catch(e){
     }
 
     async function worker(){
-      while(running){
+      while(running && myRun===runCounter){
         const idx=nextIndex++;
         if(idx>=samples.length) break;
         await processSample(idx);
