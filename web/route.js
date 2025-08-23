@@ -675,21 +675,31 @@ catch(e){
       let plz=plzCache.get(key);
       if(!plz){
         try{
-          try{
-            const r=await fetch(`/ors/geocode/reverse?point.lon=${lonS}&point.lat=${latS}&size=1`,{headers:{"Accept":"application/json"}});
+          const r=await fetch(`/ors/geocode/reverse?point.lon=${lonS}&point.lat=${latS}&size=1`,{headers:{"Accept":"application/json"}});
+          if(r.ok){
             const j=await r.json();
             plz=j?.features?.[0]?.properties?.postalcode||null;
-          }catch(_){ }
-        }catch(_){ }
+          }else{
+            setStatus(`ORS Reverse HTTP ${r.status}`,true);
+          }
+        }catch(e){
+          setStatus(`ORS Reverse: ${e.message}`,true);
+        }
         if(!plz){
           try{
             const j=await fetchJsonViaProxy(`https://nominatim.openstreetmap.org/reverse?lat=${latS}&lon=${lonS}&format=jsonv2&zoom=10&addressdetails=1`);
             plz=j?.address?.postcode||null;
-          }catch(_){ }
+          }catch(e){
+            setStatus(`Nominatim Reverse: ${e.message}`,true);
+          }
         }
         plzCache.set(key,plz);
       }
-      if(!plz){ progressIncrement(); return; }
+      if(!plz){
+        setStatus(`Keine PLZ für Koordinate ${latS.toFixed(3)}, ${lonS.toFixed(3)}`,true);
+        progressIncrement();
+        return;
+      }
 
       if(myRun!==runCounter) return;
       let items=inserateCache.get(plz);

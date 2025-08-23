@@ -8,7 +8,9 @@ classified ads instead of a static placeholder.
 
 from __future__ import annotations
 
+import asyncio
 import sys
+import time
 from pathlib import Path
 from typing import Optional
 import inspect
@@ -37,6 +39,24 @@ app = FastAPI()
 # instance alive for the lifetime of the application and hand out new pages per
 # request.
 browser_manager: PlaywrightManager | None = None
+
+# Simple global rate limiter: process at most one request per second.
+RATE_LIMIT_SECONDS = 1.0
+_last_request: float = 0.0
+_rate_lock = asyncio.Lock()
+
+
+@app.middleware("http")
+async def _rate_limit(request: Request, call_next) -> Response:
+    """Delay requests so that at most one is handled per second."""
+    global _last_request
+    async with _rate_lock:
+        now = time.monotonic()
+        wait = RATE_LIMIT_SECONDS - (now - _last_request)
+        if wait > 0:
+            await asyncio.sleep(wait)
+        _last_request = time.monotonic()
+    return await call_next(request)
 
 
 @app.on_event("startup")
