@@ -31,7 +31,6 @@ let rKm = Number(CONFIG.SEARCH_RADIUS_KM) || 10;
 let stepKm = Number(CONFIG.STEP_KM) || 10;
 // Alle Nominatim-Anfragen werden über einen Proxy geleitet,
 // daher sind keine speziellen Header mehr nötig.
-const geocodeCache = new Map();
 // Kategorien vorerst deaktiviert
 // const categoryMap = {};
 
@@ -201,63 +200,8 @@ $("#btnReset").addEventListener('click', () => {
 
 $("#btnClear").addEventListener('click', clearInputFields);
 
-// -------- Debounce & Autocomplete (auf DE beschränkt) --------
+// -------- Debounce --------
 function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};}
-async function geocodeSuggest(q){
-  // Show suggestions as early as possible; we only guard against
-  // empty strings. Requests go through the backend which proxies
-  // OpenRouteService and falls back to Nominatim if unavailable.
-  if(!q||q.length<2) return [];
-  if(geocodeCache.has(q)) return geocodeCache.get(q);
-
-  let items;
-  try{
-    const url=`/ors/geocode/autocomplete?text=${encodeURIComponent(q)}&boundary.country=DE&size=5`;
-    const res=await fetch(url,{headers:{"Accept":"application/json"},signal:abortCtrl?.signal});
-    if(!res.ok) throw new Error("ORS Suggest HTTP "+res.status);
-    const data=await res.json();
-    items=data.features.map(f=>({
-      display_name:f.properties.label,
-      lat:f.geometry.coordinates[1],
-      lon:f.geometry.coordinates[0]
-    }));
-  }catch(_){
-    const url=`https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&countrycodes=de&q=${encodeURIComponent(q)}`;
-    items=await fetchJsonViaProxy(url);
-  }
-  geocodeCache.set(q, items);
-  return items;
-}
-function bindSuggest(inputSel,listSel){
-  const input=$(inputSel), list=$(listSel);
-  const render=items=>{
-    if(!items.length){
-      list.innerHTML='<li class="muted">Keine Vorschläge gefunden</li>';
-      list.hidden=false;
-      return;
-    }
-    list.innerHTML=items.map(i=>`<li data-lat="${Number(i.lat)}" data-lon="${Number(i.lon)}">${escapeHtml(i.display_name)}</li>`).join("");
-    list.hidden=false;
-  };
-  const onPick=li=>{
-    input.value=li.textContent;
-    input.dataset.lat=li.getAttribute("data-lat");
-    input.dataset.lon=li.getAttribute("data-lon");
-    list.hidden=true;
-  };
-  list.addEventListener("click",e=>{const li=e.target.closest("li");if(li)onPick(li);});
-  input.addEventListener("input",debounce(async()=>{
-    try{ render(await geocodeSuggest(input.value)); }
-    catch(err){
-      list.innerHTML=`<li class="muted">Fehler bei der Suche: ${escapeHtml(err.message)}</li>`;
-      list.hidden=false;
-      setStatus("Autocomplete-Fehler: "+err.message,true);
-    }
-  },250));
-  input.addEventListener("blur",()=>setTimeout(()=>list.hidden=true,150));
-}
-bindSuggest("#start","#start-suggest");
-bindSuggest("#ziel","#ziel-suggest");
 
 // -------- Distanz-Helpers --------
 function haversine(lat1,lon1,lat2,lon2){
@@ -323,36 +267,6 @@ function distPointSegMeters(lat, lon, seg){
   const dx=x-xx, dy=y-yy;
   return Math.sqrt(dx*dx+dy*dy);
 }
-async function buildRouteIndex(coords){
-  const RBush=await loadRBush();
-  const tree=new RBush();
-  const segs=[];
-  for(let i=1;i<coords.length;i++){
-    const [lon1,lat1]=coords[i-1];
-    const [lon2,lat2]=coords[i];
-    segs.push({
-      minX:Math.min(lon1,lon2),
-      minY:Math.min(lat1,lat2),
-      maxX:Math.max(lon1,lon2),
-      maxY:Math.max(lat1,lat2),
-      lon1,lat1,lon2,lat2
-    });
-  }
-  tree.load(segs);
-  return {
-    distance(lat,lon){
-      const ddeg=0.2; // ~20km Suchfenster
-      const near=tree.search({minX:lon-ddeg,minY:lat-ddeg,maxX:lon+ddeg,maxY:lat+ddeg});
-      let min=Infinity;
-      for(const seg of near){
-        const d=distPointSegMeters(lat,lon,seg);
-        if(d<min) min=d;
-      }
-      return min;
-    }
-  };
-}
-
 // -------- Proxy fetch --------
 async function fetchViaProxy(url){
   const prox=`/proxy?u=${encodeURIComponent(url)}`;
@@ -595,22 +509,24 @@ $("#btnRun").addEventListener("click",()=>{
 });
 
 async function run(){
-const myRun=++runCounter;
-abortCtrl=new AbortController();
-running=true; $("#btnRun").textContent="Abbrechen";
-startGroup.classList.add("hidden");
-zielGroup.classList.add("hidden");
-queryGroup.classList.add("hidden");
-priceGroup.classList.add("hidden");
-settingsGroup.classList.add("hidden");
-mapBox.classList.remove("hidden");
-$("#results").classList.remove("hidden");
-map.invalidateSize();
-clearResults();
-setProgressState("active");           // animierte Streifen an
-setProgress(0);
-let totalFound = 0;                   // Trefferzähler für "Fertig"-Text
-const q=$("#query").value.trim();
+  const myRun=++runCounter;
+  abortCtrl=new AbortController();
+  running=true; $("#btnRun").textContent="Abbrechen";
+  startGroup.classList.add("hidden");
+  zielGroup.classList.add("hidden");
+  queryGroup.classList.add("hidden");
+  priceGroup.classList.add("hidden");
+  settingsGroup.classList.add("hidden");
+  mapBox.classList.remove("hidden");
+  $("#results").classList.remove("hidden");
+  map.invalidateSize();
+  clearResults();
+  setProgressState("active");
+  setProgress(0);
+
+  const q=$("#query").value.trim();
+  const startText=$("#start").value.trim();
+  const zielText=$("#ziel").value.trim();
   const minPriceRaw=priceMinInput.value.trim();
   const maxPriceRaw=priceMaxInput.value.trim();
   const minPrice=minPriceRaw===""?null:Number(minPriceRaw);
@@ -618,230 +534,45 @@ const q=$("#query").value.trim();
   rKm = radiusOptions[Number(radiusInput.value)] || rKm;
   stepKm = stepOptions[Number(stepInput.value)] || stepKm;
 
-  // Geocode Inputs
-  async function getLonLatFromInput(inp){
-    if(inp.dataset.lat&&inp.dataset.lon)return[Number(inp.dataset.lon),Number(inp.dataset.lat)];
-    const g=await geocodeTextOnce(inp.value);
-    if(!g.lat||!g.lon) throw new Error("Kein Treffer für "+inp.value);
-    inp.dataset.lat=g.lat;inp.dataset.lon=g.lon; return[Number(inp.dataset.lon),Number(inp.dataset.lat)];
-  }
-  let startLL, zielLL;
-  try{startLL=await getLonLatFromInput($("#start"));zielLL=await getLonLatFromInput($("#ziel"));}
-catch(e){
-  alert("Start oder Ziel nicht gefunden: "+e.message);
-  setStatus("Start/Ziel unklar: "+e.message,true);
-  running=false; abortCtrl=null;
-  setProgressState("aborted","Abgebrochen");
-  $("#btnRun").textContent="Route berechnen & suchen";
-  startGroup.classList.remove("hidden");
-  zielGroup.classList.remove("hidden");
-  queryGroup.classList.remove("hidden");
-  settingsGroup.classList.remove("hidden");
-  mapBox.classList.add("hidden");
-  return;
-}
-
-  // Markers
-  const startLatLng=[Number($("#start").dataset.lat), Number($("#start").dataset.lon)];
-  const zielLatLng=[Number($("#ziel").dataset.lat), Number($("#ziel").dataset.lon)];
-  L.marker(startLatLng,{icon:blueIcon}).addTo(resultMarkers).bindPopup("Start");
-  L.marker(zielLatLng,{icon:redIcon}).addTo(resultMarkers).bindPopup("Ziel");
-
   try{
-    const res=await fetch(`/ors/v2/directions/driving-car/geojson`,{
-      method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({coordinates:[startLL,zielLL]}),
+    const resp=await fetch('/route-search',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({start:startText, ziel:zielText, query:q, radius:rKm, step:stepKm, min_price:minPrice, max_price:maxPrice}),
       signal:abortCtrl.signal
     });
-    const data=await res.json();
-    const coords=data.features[0].geometry.coordinates;
+    if(!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const data=await resp.json();
+    const coords=data.route||[];
     if(routeLayer) map.removeLayer(routeLayer);
-    routeLayer=L.polyline(coords.map(c=>[c[1],c[0]]),{weight:5,color:'#1e66f5'}).addTo(map);
-    map.fitBounds(routeLayer.getBounds());
-
-    // Route sampling
-    function sampleEveryMeters(coords,stepMeters){
-      const out=[];let acc=0,prev=coords[0];
-      const toMeters=([lon1,lat1],[lon2,lat2])=>{
-        const dx=(lon2-lon1)*111320*Math.cos((lat1+lat2)*0.5*Math.PI/180);
-        const dy=(lat2-lat1)*110540;return Math.hypot(dx,dy);
-      };
-      for(let i=1;i<coords.length;i++){
-        const d=toMeters(prev,coords[i]);acc+=d;
-        if(acc>=stepMeters){acc=0;prev=coords[i];out.push(coords[i]);}
-      }
-      return out;
+    if(coords.length){
+      routeLayer=L.polyline(coords.map(c=>[c[1],c[0]]),{weight:5,color:'#1e66f5'}).addTo(map);
+      map.fitBounds(routeLayer.getBounds());
+      const startLatLng=[coords[0][1],coords[0][0]];
+      const zielLatLng=[coords[coords.length-1][1],coords[coords.length-1][0]];
+      L.marker(startLatLng,{icon:blueIcon}).addTo(resultMarkers).bindPopup("Start");
+      L.marker(zielLatLng,{icon:redIcon}).addTo(resultMarkers).bindPopup("Ziel");
     }
-    const samples=sampleEveryMeters(coords,stepKm*1000);
-    const routeIdx=await buildRouteIndex(coords);
-    const plzCache=new Map();
-    const inserateCache=new Map();
-    let done=0; const seen=new Set();
-    const DETAIL_LIMIT=10, DETAIL_PAR=4, WORKERS=4;
-    let nextIndex=0;
-    let orsAvailable=USE_ORS_REVERSE, orsWarned=false;
-
-    // --- Nominatim helper with rate limiting & retry ---
-    const nomQueue=[]; let nomActive=false;
-    function nominatimFetch(url){
-      return new Promise((resolve,reject)=>{nomQueue.push({url,resolve,reject});runNomQueue();});
-    }
-    async function runNomQueue(){
-      if(nomActive) return; nomActive=true;
-      while(nomQueue.length){
-        const {url,resolve,reject}=nomQueue.shift();
-        let success=false;
-        for(let attempt=0;attempt<3 && !success;attempt++){
-          try{
-            const j=await fetchJsonViaProxy(url);
-            resolve(j); success=true;
-          }catch(e){
-            if(attempt===2){reject(e);break;}
-            await new Promise(r=>setTimeout(r,500*(attempt+1)));
-          }
-        }
-        await new Promise(r=>setTimeout(r,1000));
-      }
-      nomActive=false;
-    }
-
-    function progressIncrement(){
-      if(myRun!==runCounter) return;
-      done++; setProgress(Math.round(done/samples.length*100));
-    }
-
-    async function processSample(idx){
-      if(myRun!==runCounter) return;
-      const [lonS,latS]=samples[idx];
-      const key=latS.toFixed(3)+"|"+lonS.toFixed(3);
-      let plz=plzCache.get(key);
-      if(!plz){
-        if(orsAvailable){
-          try{
-            const r=await fetch(`/ors/geocode/reverse?point.lon=${lonS}&point.lat=${latS}&size=1`,{headers:{"Accept":"application/json"}});
-            if(r.ok){
-              const j=await r.json();
-              plz=j?.features?.[0]?.properties?.postalcode||null;
-            }else{
-              if(r.status===403){
-                orsAvailable=false;
-                if(!orsWarned){setStatus("ORS Reverse HTTP 403 - ORS deaktiviert",true); orsWarned=true;}
-              }else{
-                setStatus(`ORS Reverse HTTP ${r.status}`,true);
-              }
-            }
-          }catch(e){
-            setStatus(`ORS Reverse: ${e.message}`,true);
-          }
-        }
-        if(!plz){
-          try{
-            const j=await nominatimFetch(`https://nominatim.openstreetmap.org/reverse?lat=${latS}&lon=${lonS}&format=jsonv2&zoom=10&addressdetails=1&email=info@klanavo.invalid`);
-            plz=j?.address?.postcode||null;
-          }catch(e){
-            setStatus(`Nominatim Reverse: ${e.message}`,true);
-          }
-        }
-        plzCache.set(key,plz);
-      }
-      if(!plz){
-        setStatus(`Keine PLZ für Koordinate ${latS.toFixed(3)}, ${lonS.toFixed(3)}`,true);
-        progressIncrement();
-        return;
-      }
-
-      if(myRun!==runCounter) return;
-      let items=inserateCache.get(plz);
-      if(!items){
-        try{
-          const j=await fetchApiInserate(q,plz,rKm,minPrice,maxPrice);
-          items=j?.data||[];
-          inserateCache.set(plz,items);
-        }catch(e){
-          setStatus(`API-Netzwerkfehler für PLZ ${plz}: ${e.message}`,true);
-          items=[];
-        }
-      }
-      if(myRun!==runCounter) return;
-      if(minPrice!==null){
-        items=items.filter(it=>Number(it.price)>=minPrice);
-      }
-      if(maxPrice!==null){
-        items=items.filter(it=>Number(it.price)<=maxPrice);
-      }
-      if(myRun!==runCounter) return;
-      setStatus(`PLZ ${plz}: ${items.length} Treffer`);
-
-      const fresh=[];
-      for(const it of items){
-        if(seen.has(it.url)) continue; seen.add(it.url);
-        fresh.push(it);
-        if(fresh.length>=DETAIL_LIMIT) break;
-      }
-
-      if(myRun!==runCounter) return;
-      for(let i=0;i<fresh.length;i+=DETAIL_PAR){
-        const chunk=fresh.slice(i,i+DETAIL_PAR);
-        const results=await Promise.allSettled(chunk.map(it=>enrichListing(it,true)));
-        results.forEach((res,idx)=>{
-          if(res.status!=="fulfilled") return;
-          const enrich=res.value;
-          const it=chunk[idx];
-          const loc=enrich.label||plz||"?";
-          const price=enrich.price;
-          const infoLine=price;
-          const cardHtml=`
-          <a href="${escapeHtml(it.url)}" target="_blank" rel="noopener">
-            ${enrich.image?`<img src="${escapeHtml(enrich.image)}" alt="">`:''}
-            <strong>${escapeHtml(it.title)}</strong>
-          </a>
-          <div class="muted">${escapeHtml(infoLine)}</div>
-        `;
-          if(enrich.lat&&enrich.lon){
-            const minDist=routeIdx.distance(enrich.lat,enrich.lon);
-            if(minDist<=rKm*1000){
-              addResultGalleryGroup(loc, cardHtml);
-              totalFound++;
-              const popupHtml=`<a href="${escapeHtml(it.url)}" target="_blank"><strong>${escapeHtml(it.title)}</strong></a><br>${escapeHtml(price)}<br>${escapeHtml(loc)}${enrich.image?`<br><img src="${escapeHtml(enrich.image)}" style="max-width:180px;border-radius:8px">`:''}`;
-              addListingToClusters(enrich.lat,enrich.lon,popupHtml,"Anzeigen in der Nähe");
-            }
-          }
-        });
-      }
-
-      progressIncrement();
-    }
-
-    async function worker(){
-      while(running && myRun===runCounter){
-        const idx=nextIndex++;
-        if(idx>=samples.length) break;
-        await processSample(idx);
-      }
-    }
-
-      await Promise.all(Array.from({length:WORKERS},()=>worker()));
-  if(myRun===runCounter){
+    const items=data.listings||[];
+    items.forEach(it=>{
+      const price=formatPrice(it.price||"");
+      const cardHtml=`<a href="${escapeHtml(it.url)}" target="_blank" rel="noopener"><strong>${escapeHtml(it.title)}</strong></a><div class="muted">${escapeHtml(price)}</div>`;
+      addResultGalleryGroup(it.plz||"?", cardHtml);
+    });
     setStatus("Fertig.");
     setProgress(100);
-    setProgressState("done", `Fertig – ${totalFound} Inserate`);
+    setProgressState("done", `Fertig – ${items.length} Inserate`);
     runGroup.classList.add("hidden");
     resetGroup.classList.remove("hidden");
-  }
-}catch(e){
-  if(myRun===runCounter){
-    setStatus(e.message,true);
-    setProgressState("aborted","Abgebrochen");
-    if(running){
-      startGroup.classList.remove("hidden");
-      zielGroup.classList.remove("hidden");
-      queryGroup.classList.remove("hidden");
-      settingsGroup.classList.remove("hidden");
-      mapBox.classList.add("hidden");
+  }catch(e){
+    if(myRun===runCounter){
+      setStatus(e.message,true);
+      setProgressState("aborted","Abgebrochen");
+      runGroup.classList.add("hidden");
+      resetGroup.classList.remove("hidden");
     }
-    runGroup.classList.add("hidden");
-    resetGroup.classList.remove("hidden");
   }
+  running=false; $("#btnRun").textContent="Route berechnen & suchen"; abortCtrl=null;
 }
-running=false; $("#btnRun").textContent="Route berechnen & suchen"; abortCtrl=null;
-}
+
+
