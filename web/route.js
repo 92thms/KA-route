@@ -340,10 +340,18 @@ async function fetchJsonViaProxy(url){
 
 // -------- Preisformat --------
 function formatPrice(p){
-  if(!p)return"VB oder Kostenlos";
-  const n=String(p).trim(); if(n==="")return"VB oder Kostenlos";
-  if(/[€]/.test(n))return n;
-  const digits=n.replace(/[^0-9]/g,''); if(!digits)return"VB oder Kostenlos";
+  if(!p) return "VB oder Kostenlos";
+  const n = String(p).trim();
+  if(n === "") return "VB oder Kostenlos";
+  const hasVB = /VB/i.test(n);
+  if(hasVB){
+    const digits = n.replace(/[^0-9]/g,'');
+    if(digits) return new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'}).format(Number(digits))+' VB';
+    return 'VB';
+  }
+  if(/[€]/.test(n)) return n;
+  const digits=n.replace(/[^0-9]/g,'');
+  if(!digits) return "VB oder Kostenlos";
   return new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'}).format(Number(digits));
 }
 
@@ -424,10 +432,15 @@ async function parseListingDetails(html){
 
   // Preis
   let price=null;
-  let pm= html.match(/"price":"([^"]+)"/i)
-        ||html.match(/<meta[^>]+property=['"]product:price:amount['"][^>]*content=['"]([^'"]+)['"]/i)
-        ||html.match(/([0-9][0-9\., ]* ?€)/);
-  if(pm) price=pm[1].toString().trim();
+  let vb=html.match(/id=['"]viewad-price['"][^>]*>\s*([^<]*VB[^<]*)</i);
+  if(vb){
+    price=vb[1].replace(/\s+/g,' ').trim();
+  } else {
+    let pm= html.match(/"price":"([^"]+)"/i)
+          ||html.match(/<meta[^>]+property=['"]product:price:amount['"][^>]*content=['"]([^'"]+)['"]/i)
+          ||html.match(/([0-9][0-9\., ]* ?€)/);
+    if(pm) price=pm[1].toString().trim();
+  }
 
   return {title,postal,cityText,price:formatPrice(price),image,lat,lon};
 }
@@ -654,7 +667,7 @@ async function run(){
           const imgHtml=info.image?`<img src="${escapeHtml(info.image)}" alt="">`:"";
           const cardHtml=`${imgHtml}<a href="${escapeHtml(it.url)}" target="_blank" rel="noopener"><strong>${escapeHtml(it.title)}</strong></a><div class="muted">${escapeHtml(info.price)}</div>`;
           addResultGalleryGroup(info.label||it.plz||"?", cardHtml);
-          addListingToClusters(info.lat,info.lon,`<a href="${escapeHtml(it.url)}" target="_blank" rel="noopener">${escapeHtml(it.title)}</a>`, info.label||it.plz||"?");
+          addListingToClusters(info.lat,info.lon,cardHtml, info.label||it.plz||"?");
           added++;
         }
       }
