@@ -27,8 +27,8 @@ if(MAINTENANCE_MODE && MAINTENANCE_KEY){
 
 const radiusOptions=[5,10,20];
 const stepOptions=[5,10,20];
-let rKm = Number(CONFIG.SEARCH_RADIUS_KM) || 10;
-let stepKm = Number(CONFIG.STEP_KM) || 10;
+let rKm = 10;
+let stepKm = 10;
 // Alle Nominatim-Anfragen werden über einen Proxy geleitet,
 // daher sind keine speziellen Header mehr nötig.
 function escapeHtml(str){
@@ -200,14 +200,14 @@ function renderResults(){
   }
 }
 
-filterPriceMin.addEventListener('input',()=>renderResults());
-filterPriceMax.addEventListener('input',()=>renderResults());
-filterPriceMin.addEventListener('blur',()=>{formatPriceInput(filterPriceMin);renderResults();});
-filterPriceMax.addEventListener('blur',()=>{formatPriceInput(filterPriceMax);renderResults();});
+filterPriceMin.addEventListener('input',()=>highlightCluster(null));
+filterPriceMax.addEventListener('input',()=>highlightCluster(null));
+filterPriceMin.addEventListener('blur',()=>{formatPriceInput(filterPriceMin);highlightCluster(null);});
+filterPriceMax.addEventListener('blur',()=>{formatPriceInput(filterPriceMax);highlightCluster(null);});
 sortPriceBtn.addEventListener('click',()=>{
   if(sortField==='price'){sortDir*=-1;}else{sortField='price';sortDir=1;}
   updateSortButtons();
-  renderResults();
+  highlightCluster(null);
 });
 groupBtn.addEventListener('click',()=>{
   groupMode=(groupMode+1)%3;
@@ -221,7 +221,7 @@ groupBtn.addEventListener('click',()=>{
     groupBtn.textContent='🖼️';
     groupBtn.title='Gruppierung aufheben';
   }
-  renderResults();
+  highlightCluster(null);
 });
 updateSortButtons();
 
@@ -660,7 +660,6 @@ $("#btnRun").addEventListener("click",()=>{
     running=false;
     runCounter++;
     if(abortCtrl) abortCtrl.abort();
-    abortCtrl=null;
     setStatus("Suche abgebrochen.", true);
     setProgressState("aborted", "Abgebrochen");
     $("#btnRun").textContent="Route berechnen & suchen";
