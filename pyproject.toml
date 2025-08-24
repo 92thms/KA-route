@@ -1,0 +1,16 @@
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+exclude = "api/ebay-kleinanzeigen-api"
+
+[tool.ruff]
+line-length = 88
+exclude = ["api/ebay-kleinanzeigen-api"]
+
+[tool.ruff.lint]
+select = ["E", "F", "B"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"

@@ -1,0 +1,9 @@
+{
+  "name": "ka-route-web",
+  "version": "1.0.0",
+  "private": true,
+  "devDependencies": {
+    "eslint": "8.57.0",
+    "prettier": "3.6.2"
+  }
+}

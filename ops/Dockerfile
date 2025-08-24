@@ -14,8 +14,11 @@ WORKDIR /app
 # Upstream-API (Kleinanzeigen-Scraper) dynamisch nachziehen
 COPY api /app/api
 WORKDIR /app/api
+# Pin the scraper to a fixed commit for reproducible builds
 RUN rm -rf ebay-kleinanzeigen-api && \
-    git clone --depth=1 https://github.com/DanielWTE/ebay-kleinanzeigen-api.git ebay-kleinanzeigen-api
+    git clone https://github.com/DanielWTE/ebay-kleinanzeigen-api.git ebay-kleinanzeigen-api && \
+    cd ebay-kleinanzeigen-api && \
+    git checkout 9a9f769cfb5090805d47044d495e1cf333ceba10
 
 # Python-Abhängigkeiten der API (falls vorhanden)
 RUN if [ -f requirements.txt ]; then \

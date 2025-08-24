@@ -16,3 +16,18 @@ services:
       MAINTENANCE_MODE: ${MAINTENANCE_MODE:-0}
       MAINTENANCE_KEY: ${MAINTENANCE_KEY:-}
       USE_ORS_REVERSE: ${USE_ORS_REVERSE:-0}
+    volumes:
+      - cache-data:/app/api/cache
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  cache-data:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+      o: size=8g

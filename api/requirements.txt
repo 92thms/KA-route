@@ -1,6 +1,6 @@
-fastapi
-playwright
-python-multipart
-httpx
+fastapi==0.116.1
+playwright==1.54.0
+python-multipart==0.0.20
+httpx==0.28.1
 
-beautifulsoup4
+beautifulsoup4==4.13.4
