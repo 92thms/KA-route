@@ -14,6 +14,8 @@ import time
 from pathlib import Path
 from typing import Optional, Any
 import math
+import json
+import hashlib
 
 from pydantic import BaseModel
 import inspect
@@ -51,12 +53,38 @@ _rate_lock = asyncio.Lock()
 # Global cache for reverse geocoded postal codes
 _plz_cache: dict[str, str | None] = {}
 
-# Simple in-memory analytics counters
-_stats: dict[str, Any] = {
-    "searches_saved": 0,
-    "listings_found": 0,
-    "visitors": set(),
-}
+# Simple analytics storage
+_STATS_FILE = Path(__file__).with_name("stats.json")
+
+
+def _load_stats() -> dict[str, Any]:
+    if _STATS_FILE.exists():
+        try:
+            data = json.loads(_STATS_FILE.read_text())
+            data["visitors"] = set(data.get("visitors", []))
+            return data
+        except Exception:
+            pass
+    return {"searches_saved": 0, "listings_found": 0, "visitors": set()}
+
+
+_stats: dict[str, Any] = _load_stats()
+
+
+def _persist_stats() -> None:
+    data = {
+        "searches_saved": _stats.get("searches_saved", 0),
+        "listings_found": _stats.get("listings_found", 0),
+        "visitors": list(_stats.get("visitors", set())),
+    }
+    try:
+        _STATS_FILE.write_text(json.dumps(data))
+    except Exception:
+        pass
+
+
+def _anonymise_ip(ip: str) -> str:
+    return hashlib.sha256(ip.encode("utf-8")).hexdigest()
 
 
 @app.middleware("http")
@@ -319,7 +347,8 @@ async def route_search(req: RouteSearchRequest, request: Request) -> dict:
     _stats["searches_saved"] += 1
     _stats["listings_found"] += len(results)
     if request.client:
-        _stats["visitors"].add(request.client.host)
+        _stats["visitors"].add(_anonymise_ip(request.client.host))
+    _persist_stats()
 
     return {"route": coords, "listings": results}
 
