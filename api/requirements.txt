@@ -2,3 +2,5 @@ fastapi
 playwright
 python-multipart
 httpx
+
+beautifulsoup4

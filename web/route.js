@@ -382,69 +382,7 @@ function formatPrice(p){
   return new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'}).format(Number(digits));
 }
 
-// -------- Parsing --------
 function cityFromAddr(a){return a?.city||a?.town||a?.village||a?.municipality||a?.county||'';}
-function safeParse(json){try{return JSON.parse(json);}catch(_){return null;}}
-async function parseListingDetails(html){
-  const doc=new DOMParser().parseFromString(html,'text/html');
-  const title=doc.querySelector('meta[property="og:title"]')?.content||doc.title||null;
-  let image=doc.querySelector('meta[property="og:image"]')?.content||null;
-  let postal=null, cityText=null;
-
-  // 1) JSON-LD
-  doc.querySelectorAll('script[type="application/ld+json"]').forEach(s=>{
-    try{
-      const obj=JSON.parse(s.textContent);
-      const addr=obj.address||obj.itemOffered?.address||obj.offers?.seller?.address;
-      if(addr){ postal=postal||addr.postalCode||addr.postcode||addr.zip; cityText=cityText||addr.addressLocality||addr.city||addr.town; }
-      if(!image && obj.image){ image=Array.isArray(obj.image)?obj.image[0]:(typeof obj.image==='string'?obj.image:null); }
-    }catch(_){}
-  });
-
-  // 2) __INITIAL_STATE__
-  if(!postal||!cityText){
-    doc.querySelectorAll('script').forEach(s=>{
-      const t=s.textContent||'';
-      if(t.includes('__INITIAL_STATE__')){
-        const start=t.indexOf('{'), end=t.lastIndexOf('}');
-        if(start>=0&&end>start){
-          const st=safeParse(t.slice(start,end+1));
-          const a=st?.ad?.adAddress||st?.adInfo?.address||st?.adData?.address||null;
-          if(a){ postal=postal||a.postalCode||a.postcode||a.zipCode; cityText=cityText||a.city||a.town||a.addressLocality; }
-        }
-      }
-    });
-  }
-
-  // 3) Fallbacks
-  if(!postal){
-    const m = html.match(/"(?:postalCode|postcode|zip|zipCode|zipcode)"\s*:\s*"?(\d{5})"?/i);
-    if(m) postal = m[1];
-  }
-  if(!postal){
-    const ctx=/(\bplz\b|postleitzahl|postal(?:code)?|adresse|address|standort|ort|stadt|gemeinde|wohnort)/i;
-    const matches=[...html.matchAll(/\b(\d{5})\b/g)].map(m=>({code:m[1],idx:m.index||0}));
-    const filtered=matches.filter(({code,idx})=>{
-      const left=Math.max(0,idx-100), right=Math.min(html.length,idx+100);
-      const win=html.slice(left,right);
-      const prev=html[idx-1]||'', next=html[idx+5]||'';
-      const neighborsBad=/[-A-Za-z]/.test(prev)||/[-A-Za-z]/.test(next);
-      const looksLikePrice=new RegExp(code+'[\\s\\/,\\.-]*€').test(win);
-      const hasContext=ctx.test(win);
-      return !neighborsBad && !looksLikePrice && hasContext;
-    });
-    if(filtered.length) postal=filtered[0].code;
-  }
-
-  // Preis
-  let price=null;
-  let pm= html.match(/"price":"([^"]+)"/i)
-        ||html.match(/<meta[^>]+property=['"]product:price:amount['"][^>]*content=['"]([^'"]+)['"]/i)
-        ||html.match(/([0-9][0-9\., ]* ?€)/);
-  if(pm) price=pm[1].toString().trim();
-
-  return {title,postal,cityText,price:formatPrice(price),image};
-}
 
 async function reversePLZ(postal){
   try{
@@ -498,13 +436,12 @@ async function enrichListing(it,wantDetails=true){
   let lat=null,lon=null,price=formatPrice(it.price||""),postal=null,label=null,image=null,cityText=null;
   if(wantDetails){
     try{
-      const html=await fetchViaProxy(it.url);
-      const det=await parseListingDetails(html);
+      const det=await fetch(`/api/listing?url=${encodeURIComponent(it.url)}`).then(r=>r.json());
       if(det.title) it.title=det.title;
       if(det.price) price=det.price;
       if(det.image) image=det.image;
-      postal=det.postal; cityText=det.cityText;
-    }catch(e){ setStatus("Proxy/Parse-Fehler: "+e.message,true); }
+      postal=det.postal; cityText=det.city;
+    }catch(e){ setStatus("Listing-Fehler: "+e.message,true); }
   }
   if(postal){
     const g=await reversePLZ(postal);
