@@ -21,9 +21,9 @@ from fastapi import FastAPI, HTTPException, Request, Response
 import httpx
 
 
-# Make the bundled ``ebay-kleinanzeigen-api`` package importable.  The
-# Dockerfile clones the upstream repository into ``api/ebay-kleinanzeigen-api``
-# so we simply add that directory to ``sys.path`` here.
+# Make the vendored ``ebay-kleinanzeigen-api`` package importable.  The project
+# lives under ``api/ebay-kleinanzeigen-api`` within this repository, so we add
+# that directory to ``sys.path``.
 SCRAPER_DIR = Path(__file__).resolve().parent / "ebay-kleinanzeigen-api"
 sys.path.insert(0, str(SCRAPER_DIR))
 
