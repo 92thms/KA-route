@@ -31,8 +31,6 @@ let rKm = Number(CONFIG.SEARCH_RADIUS_KM) || 10;
 let stepKm = Number(CONFIG.STEP_KM) || 10;
 // Alle Nominatim-Anfragen werden über einen Proxy geleitet,
 // daher sind keine speziellen Header mehr nötig.
-const categoryMap = {};
-
 function escapeHtml(str){
   return String(str).replace(/[&<>"']/g, s => ({
     "&": "&amp;",
@@ -81,20 +79,7 @@ async function updateRateLimitInfo(){
 
   updateRateLimitInfo();
 
-async function loadCategories(){
-  try{
-    const cats=await fetch('categories.json').then(r=>r.json());
-    cats.forEach(c=>{ categoryMap[c.id]=c.name; });
-  }catch(err){
-    console.error('Kategorien konnten nicht geladen werden', err);
-  }
-}
-loadCategories();
-
-function extractCategoryId(url){
-  const m=url.match(/(\d+)-(\d+)(?:-\d+)?\.html?$/);
-  return m?m[2]:null;
-}
+// Kategorien werden direkt aus dem Inserat geparst, daher keine Vorab-Liste nötig
 // Progress-Helfer
 function setProgress(pct){
   const bar = $("#progressBar"), txt = $("#progressText");
@@ -180,15 +165,20 @@ function renderResults(){
   resultsBox.querySelectorAll('.groupbox').forEach(el=>el.remove());
   groups.clear();
   resultGallery.innerHTML='';
-  const min=parsePriceInput(filterPriceMin.value.trim());
-  const max=parsePriceInput(filterPriceMax.value.trim());
-  let arr=resultItems.filter(it=>{
-    if(min!==null && it.priceVal<min) return false;
-    if(max!==null && it.priceVal>max) return false;
-    return true;
-  });
-  if(sortField==='price'){
-    arr.sort((a,b)=> (a.priceVal-b.priceVal)*sortDir);
+  let arr=resultItems;
+  if(activeCluster===null){
+    const min=parsePriceInput(filterPriceMin.value.trim());
+    const max=parsePriceInput(filterPriceMax.value.trim());
+    arr=arr.filter(it=>{
+      if(min!==null && it.priceVal<min) return false;
+      if(max!==null && it.priceVal>max) return false;
+      return true;
+    });
+    if(sortField==='price'){
+      arr.sort((a,b)=> (a.priceVal-b.priceVal)*sortDir);
+    }
+  }else{
+    arr=arr.filter(it=>it.clusterId===activeCluster);
   }
   if(groupMode===GROUP_NONE){
     resultGallery.classList.remove('hidden');
@@ -349,17 +339,16 @@ function highlightCluster(id){
     const prev = markerClusters[activeCluster];
     if(prev){
       prev.marker.setIcon(greenIcon);
-      document.querySelectorAll(`[data-cluster="${activeCluster}"]`).forEach(el=>el.classList.remove('highlight'));
     }
   }
-  if(id === null || markerClusters[id]==null){
-    activeCluster = null;
-    return;
+  activeCluster = (id!==null && markerClusters[id]!=null) ? id : null;
+  renderResults();
+  document.querySelectorAll(`[data-cluster]`).forEach(el=>el.classList.remove('highlight'));
+  if(activeCluster!==null){
+    const cluster = markerClusters[activeCluster];
+    cluster.marker.setIcon(orangeIcon);
+    document.querySelectorAll(`[data-cluster="${activeCluster}"]`).forEach(el=>el.classList.add('highlight'));
   }
-  const cluster = markerClusters[id];
-  cluster.marker.setIcon(orangeIcon);
-  document.querySelectorAll(`[data-cluster="${id}"]`).forEach(el=>el.classList.add('highlight'));
-  activeCluster = id;
 }
 
 map.on('click', () => highlightCluster(null));
@@ -443,6 +432,10 @@ async function parseListingDetails(html){
   const title=doc.querySelector('meta[property="og:title"]')?.content||doc.title||null;
   let image=doc.querySelector('meta[property="og:image"]')?.content||null;
   let postal=null, cityText=null, lat=null, lon=null;
+  let categories=[];
+
+  // Kategorien aus Breadcrumb
+  categories=[...doc.querySelectorAll('.breadcrump-link')].map(el=>el.textContent.trim()).filter(Boolean);
 
   // 1) JSON-LD
   doc.querySelectorAll('script[type="application/ld+json"]').forEach(s=>{
@@ -522,7 +515,7 @@ async function parseListingDetails(html){
     if(pm) price=pm[1].toString().trim();
   }
 
-  return {title,postal,cityText,price:formatPrice(price),image,lat,lon};
+  return {title,postal,cityText,price:formatPrice(price),image,lat,lon,categories};
 }
 
 async function reversePLZ(postal){
@@ -577,7 +570,7 @@ async function geocodeTextOnce(text){
 }
 
 async function enrichListing(it,wantDetails=true){
-  let lat=null,lon=null,price=formatPrice(it.price||""),postal=null,label=null,image=null,cityText=null;
+  let lat=null,lon=null,price=formatPrice(it.price||""),postal=null,label=null,image=null,cityText=null,categories=null,category=null;
   if(wantDetails){
     try{
       const html=await fetchViaProxy(it.url);
@@ -587,6 +580,8 @@ async function enrichListing(it,wantDetails=true){
       if(det.image) image=det.image;
       postal=det.postal; cityText=det.cityText;
       if(det.lat!=null && det.lon!=null){ lat=det.lat; lon=det.lon; }
+      categories=det.categories;
+      if(det.categories&&det.categories.length){ category=det.categories[det.categories.length-1]; }
     }catch(e){ setStatus("Proxy/Parse-Fehler: "+e.message,true); }
   }
   if(lat===null||lon===null){
@@ -601,7 +596,7 @@ async function enrichListing(it,wantDetails=true){
   if(!label){
     label = `${postal||""}${cityText?` ${cityText}`:""}`.trim();
   }
-  return {lat,lon,label,price,image,postal};
+  return {lat,lon,label,price,image,postal,categories,category};
 }
 
 // Icons
@@ -746,8 +741,7 @@ async function run(){
         const dist=minDistToRouteMeters(info.lat,info.lon,coords);
         if(dist/1000<=rKm){
           const imgHtml=info.image?`<img src="${escapeHtml(info.image)}" alt="">`:"";
-          const catId=extractCategoryId(it.url);
-          const catName=catId?categoryMap[catId]||'Unbekannt':'Unbekannt';
+          const catName=info.category||'Unbekannt';
           const cardHtml=`${imgHtml}<a href="${escapeHtml(it.url)}" target="_blank" rel="noopener"><strong>${escapeHtml(it.title)}</strong></a><div class="muted">${escapeHtml(info.price)} – ${escapeHtml(catName)}</div>`;
           const label=info.label||it.plz||"?";
           const cluster=addListingToClusters(info.lat,info.lon);
