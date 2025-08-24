@@ -52,8 +52,8 @@ const resultMarkers = L.layerGroup().addTo(map);
 // Shorthands
 const $=sel=>document.querySelector(sel);
 const startGroup=$("#grpStart"), zielGroup=$("#grpZiel"), queryGroup=$("#grpQuery"), settingsGroup=$("#grpSettings"), runGroup=$("#grpRun"), resetGroup=$("#grpReset"), mapBox=$("#map-box"), resultsBox=$("#results"), resultGallery=$("#resultGallery");
-const categorySelect=$("#category");
 const radiusInput=$("#radius"), stepInput=$("#step"), radiusVal=$("#radiusVal"), stepVal=$("#stepVal"), rateLimitInfo=$("#rateLimitInfo"), filterPriceMin=$("#filterPriceMin"), filterPriceMax=$("#filterPriceMax"), sortPriceBtn=$("#sortPrice"), groupBtn=$("#toggleGrouping");
+const queryWarn=$("#queryWarn");
 const radiusIdx=radiusOptions.indexOf(rKm);
 radiusInput.value=radiusIdx>=0?radiusIdx:1;
 radiusVal.textContent=radiusOptions[radiusInput.value];
@@ -62,6 +62,7 @@ stepInput.value=stepIdx>=0?stepIdx:1;
 stepVal.textContent=stepOptions[stepInput.value];
 radiusInput.addEventListener('input',()=>radiusVal.textContent=radiusOptions[radiusInput.value]);
 stepInput.addEventListener('input',()=>stepVal.textContent=stepOptions[stepInput.value]);
+$("#query").addEventListener('input',()=>queryWarn.classList.add('hidden'));
 
 async function updateRateLimitInfo(){
     try{
@@ -81,17 +82,9 @@ async function updateRateLimitInfo(){
   updateRateLimitInfo();
 
 async function loadCategories(){
-  if(!categorySelect) return;
-  categorySelect.innerHTML='<option value="">Alle Kategorien</option>';
   try{
     const cats=await fetch('categories.json').then(r=>r.json());
-    cats.forEach(c=>{
-      categoryMap[c.id]=c.name;
-      const opt=document.createElement('option');
-      opt.value=c.id;
-      opt.textContent=c.name;
-      categorySelect.appendChild(opt);
-    });
+    cats.forEach(c=>{ categoryMap[c.id]=c.name; });
   }catch(err){
     console.error('Kategorien konnten nicht geladen werden', err);
   }
@@ -138,18 +131,17 @@ function clearResults(){
   const r=resultsBox;
   r.querySelectorAll('.groupbox').forEach(el=>el.remove());
   resultGallery.innerHTML='';
-  resultMarkers.clearLayers();markerClusters.length=0;
+  resultMarkers.clearLayers();markerClusters.length=0;activeCluster=null;
   groups.clear();
 }
-function addResultGalleryGroup(loc, cardHtml){
+function addResultGalleryGroup(loc, cardHtml, clusterId){
   const box=ensureGroup(loc);
   const gallery=box.querySelector('.gallery');
-  const frag=document.createDocumentFragment();
   const item=document.createElement('div');
   item.className='gallery-item';
   item.innerHTML=cardHtml;
-  frag.appendChild(item);
-  gallery.appendChild(frag);
+  if(clusterId!=null) item.dataset.cluster=clusterId;
+  gallery.appendChild(item);
   const badge=box.querySelector('.badge');
   badge.textContent=String(Number(badge.textContent)+1);
 }
@@ -205,6 +197,7 @@ function renderResults(){
       const item=document.createElement('div');
       item.className='gallery-item';
       item.innerHTML=it.cardHtml;
+      if(it.clusterId!=null) item.dataset.cluster=it.clusterId;
       frag.appendChild(item);
     });
     resultGallery.appendChild(frag);
@@ -212,7 +205,7 @@ function renderResults(){
     resultGallery.classList.add('hidden');
     arr.forEach(it=>{
       const key=groupMode===GROUP_LOCATION?it.label:(it.category||'Unbekannt');
-      addResultGalleryGroup(key,it.cardHtml);
+      addResultGalleryGroup(key,it.cardHtml,it.clusterId);
     });
   }
 }
@@ -249,7 +242,7 @@ function clearInputFields(){
   });
   filterPriceMin.value='';
   filterPriceMax.value='';
-  if(categorySelect) categorySelect.value='';
+  queryWarn.classList.add('hidden');
 }
 
 $("#btnReset").addEventListener('click', () => {
@@ -329,7 +322,7 @@ function haversine(lat1,lon1,lat2,lon2){
 }
 
 // --- Marker-Gruppierung (nahe beieinander) ---
-const markerClusters = []; // {lat, lon, marker, items: [html]}
+const markerClusters = []; // {id, lat, lon, marker}
 function distMeters(aLat, aLon, bLat, bLon){
   const R=6371e3, toRad=d=>d*Math.PI/180;
   const dφ=toRad(bLat-aLat), dλ=toRad(bLon-aLon);
@@ -337,25 +330,39 @@ function distMeters(aLat, aLon, bLat, bLon){
   const x=Math.sin(dφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(dλ/2)**2;
   return 2*R*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));
 }
-function addListingToClusters(lat, lon, itemHtml, titleForPopup="Anzeigen in der Nähe"){
-  const existing = markerClusters.find(c => distMeters(c.lat,c.lon,lat,lon) < 200); // 200 m
+function addListingToClusters(lat, lon){
+  let existing = markerClusters.find(c => distMeters(c.lat,c.lon,lat,lon) < 200); // 200 m
   if(existing){
-    existing.items.push(itemHtml);
-    const list = `<strong>${titleForPopup}</strong><ul class="preview-list">
-      ${existing.items.map(x=>`<li>${x}</li>`).join('')}
-    </ul>`;
-    existing.marker.setPopupContent(list);
-    return existing.marker;
-  }else{
+    return existing;
+  } else {
     const marker = L.marker([lat,lon],{icon:greenIcon}).addTo(resultMarkers);
-    const list = `<strong>${titleForPopup}</strong><ul class="preview-list">
-      <li>${itemHtml}</li>
-    </ul>`;
-    marker.bindPopup(list);
-    markerClusters.push({lat,lon,marker,items:[itemHtml]});
-    return marker;
+    const cluster = {id: markerClusters.length, lat, lon, marker};
+    markerClusters.push(cluster);
+    marker.on('click', () => highlightCluster(cluster.id));
+    return cluster;
   }
 }
+
+let activeCluster = null;
+function highlightCluster(id){
+  if(activeCluster !== null){
+    const prev = markerClusters[activeCluster];
+    if(prev){
+      prev.marker.setIcon(greenIcon);
+      document.querySelectorAll(`[data-cluster="${activeCluster}"]`).forEach(el=>el.classList.remove('highlight'));
+    }
+  }
+  if(id === null || markerClusters[id]==null){
+    activeCluster = null;
+    return;
+  }
+  const cluster = markerClusters[id];
+  cluster.marker.setIcon(orangeIcon);
+  document.querySelectorAll(`[data-cluster="${id}"]`).forEach(el=>el.classList.add('highlight'));
+  activeCluster = id;
+}
+
+map.on('click', () => highlightCluster(null));
 
 // ---- Route-Index & Distanzberechnung ----
 async function loadRBush(){
@@ -601,6 +608,7 @@ async function enrichListing(it,wantDetails=true){
 const greenIcon=L.icon({iconUrl:"https://maps.google.com/mapfiles/ms/icons/green-dot.png",iconSize:[32,32],iconAnchor:[16,32]});
 const blueIcon=L.icon({iconUrl:"https://maps.google.com/mapfiles/ms/icons/blue-dot.png",iconSize:[32,32],iconAnchor:[16,32]});
 const redIcon=L.icon({iconUrl:"https://maps.google.com/mapfiles/ms/icons/red-dot.png",iconSize:[32,32],iconAnchor:[16,32]});
+const orangeIcon=L.icon({iconUrl:"https://maps.google.com/mapfiles/ms/icons/orange-dot.png",iconSize:[32,32],iconAnchor:[16,32]});
 
 // ---------- ROBUSTER MOBILE-FETCH FÜR /api/inserate ----------
 async function fetchApiInserate(q, plz, rKm) {
@@ -673,12 +681,14 @@ $("#btnRun").addEventListener("click",()=>{
 });
 
 async function run(){
+  queryWarn.classList.add('hidden');
   const q=$("#query").value.trim();
   const startText=$("#start").value.trim();
   const zielText=$("#ziel").value.trim();
   rKm = radiusOptions[Number(radiusInput.value)] || rKm;
   stepKm = stepOptions[Number(stepInput.value)] || stepKm;
   if(!q){
+    queryWarn.classList.remove('hidden');
     setStatus("Bitte Suchbegriff eingeben.", true);
     return;
   }
@@ -701,9 +711,7 @@ async function run(){
   setProgress(0);
 
   try{
-    const catVal=categorySelect?Number(categorySelect.value):NaN;
     const payload={start:startText, ziel:zielText, query:q, radius:rKm, step:stepKm};
-    if(!Number.isNaN(catVal)) payload.category=catVal;
     const resp=await fetch('/api/route-search',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
@@ -742,8 +750,8 @@ async function run(){
           const catName=catId?categoryMap[catId]||'Unbekannt':'Unbekannt';
           const cardHtml=`${imgHtml}<a href="${escapeHtml(it.url)}" target="_blank" rel="noopener"><strong>${escapeHtml(it.title)}</strong></a><div class="muted">${escapeHtml(info.price)} – ${escapeHtml(catName)}</div>`;
           const label=info.label||it.plz||"?";
-          resultItems.push({label,cardHtml,priceVal:parsePriceVal(info.price),category:catName});
-          addListingToClusters(info.lat,info.lon,cardHtml,label);
+          const cluster=addListingToClusters(info.lat,info.lon);
+          resultItems.push({label,cardHtml,priceVal:parsePriceVal(info.price),category:catName,clusterId:cluster.id});
           added++;
           renderResults();
         }

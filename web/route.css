@@ -147,10 +147,12 @@
   .muted{color:#aaa}
   .thumb{width:256px;height:256px;object-fit:cover;border-radius:6px;margin-right:8px;vertical-align:middle}
 
-  /* Popup/Preview Lists */
-  .preview-list{list-style:none;padding:0;margin:6px 0}
-  .preview-list li{position:relative;padding-left:12px;margin:4px 0}
-  .preview-list li::before{content:"";position:absolute;left:0;top:9px;width:4px;height:4px;border-radius:50%;background:var(--accent);}
+  .warn{color:var(--err);font-size:12px}
+
+  .gallery-item.highlight{
+    border-color:#f4a261;
+    box-shadow:0 0 0 2px #f4a261 inset;
+  }
 
   /* Auf-/zuklappbare Ortsgruppen + Galerie */
   #results .groupbox{border:1px solid var(--border);border-radius:10px;margin:10px 0;overflow:hidden;background:var(--card)}
