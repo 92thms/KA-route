@@ -78,17 +78,18 @@
 
 <div id="panel">
   <div id="results" class="hidden">
-    <div class="results-header"><strong>Ergebnisliste</strong><button id="btnToggleAll" class="toggle-all" data-state="closed" title="Alle ausklappen">▼</button></div>
+    <div class="results-header"><strong>Ergebnisliste</strong></div>
     <div id="resultsControls">
       <div class="price-range">
         <input id="filterPriceMin" type="number" placeholder="Preis von">
         <input id="filterPriceMax" type="number" placeholder="bis">
       </div>
       <div class="sort-icons">
-        <button id="sortLocation" data-dir="asc" title="Nach Ort sortieren">📍</button>
+        <button id="toggleGrouping" title="Nach Ort gruppieren">📍</button>
         <button id="sortPrice" data-dir="asc" title="Nach Preis sortieren">€</button>
       </div>
     </div>
+    <div id="resultGallery" class="gallery"></div>
   </div>
 </div>
 

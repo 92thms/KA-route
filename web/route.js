@@ -52,8 +52,8 @@ const resultMarkers = L.layerGroup().addTo(map);
 
 // Shorthands
 const $=sel=>document.querySelector(sel);
-const startGroup=$("#grpStart"), zielGroup=$("#grpZiel"), queryGroup=$("#grpQuery"), settingsGroup=$("#grpSettings"), runGroup=$("#grpRun"), resetGroup=$("#grpReset"), mapBox=$("#map-box"), resultsBox=$("#results");
-const radiusInput=$("#radius"), stepInput=$("#step"), radiusVal=$("#radiusVal"), stepVal=$("#stepVal"), rateLimitInfo=$("#rateLimitInfo"), filterPriceMin=$("#filterPriceMin"), filterPriceMax=$("#filterPriceMax"), sortPriceBtn=$("#sortPrice"), sortLocBtn=$("#sortLocation");
+const startGroup=$("#grpStart"), zielGroup=$("#grpZiel"), queryGroup=$("#grpQuery"), settingsGroup=$("#grpSettings"), runGroup=$("#grpRun"), resetGroup=$("#grpReset"), mapBox=$("#map-box"), resultsBox=$("#results"), resultGallery=$("#resultGallery");
+const radiusInput=$("#radius"), stepInput=$("#step"), radiusVal=$("#radiusVal"), stepVal=$("#stepVal"), rateLimitInfo=$("#rateLimitInfo"), filterPriceMin=$("#filterPriceMin"), filterPriceMax=$("#filterPriceMax"), sortPriceBtn=$("#sortPrice"), groupBtn=$("#toggleGrouping");
 const radiusIdx=radiusOptions.indexOf(rKm);
 radiusInput.value=radiusIdx>=0?radiusIdx:1;
 radiusVal.textContent=radiusOptions[radiusInput.value];
@@ -124,6 +124,7 @@ function resetStatus(){}
 
 // -------- Ergebnisliste: gruppiert + Galerie --------
 const groups = new Map(); // key -> details element
+let groupByLocation = false;
 
 function ensureGroup(loc){
   const key=loc||"Unbekannt";
@@ -138,6 +139,7 @@ function ensureGroup(loc){
 function clearResults(){
   const r=resultsBox;
   r.querySelectorAll('.groupbox').forEach(el=>el.remove());
+  resultGallery.innerHTML='';
   resultMarkers.clearLayers();markerClusters.length=0;
   groups.clear();
 }
@@ -156,7 +158,7 @@ function addResultGalleryGroup(loc, cardHtml){
 
 // Ergebnisdaten und Filter/Sortierung
 const resultItems=[];
-let sortField='label';
+let sortField='price';
 let sortDir=1; // 1=asc, -1=desc
 
 function parsePriceVal(str){
@@ -166,12 +168,12 @@ function parsePriceVal(str){
 
 function updateSortButtons(){
   sortPriceBtn.textContent='€'+(sortField==='price'?(sortDir===1?'↑':'↓'):'');
-  sortLocBtn.textContent='📍'+(sortField==='label'?(sortDir===1?'↑':'↓'):'');
 }
 
 function renderResults(){
   resultsBox.querySelectorAll('.groupbox').forEach(el=>el.remove());
   groups.clear();
+  resultGallery.innerHTML='';
   const min=filterPriceMin.value.trim()===''?null:Number(filterPriceMin.value);
   const max=filterPriceMax.value.trim()===''?null:Number(filterPriceMax.value);
   let arr=resultItems.filter(it=>{
@@ -179,11 +181,23 @@ function renderResults(){
     if(max!==null && it.priceVal>max) return false;
     return true;
   });
-  arr.sort((a,b)=>{
-    if(sortField==='price') return (a.priceVal-b.priceVal)*sortDir;
-    return a.label.localeCompare(b.label)*sortDir;
-  });
-  arr.forEach(it=>addResultGalleryGroup(it.label,it.cardHtml));
+  if(sortField==='price'){
+    arr.sort((a,b)=> (a.priceVal-b.priceVal)*sortDir);
+  }
+  if(groupByLocation){
+    resultGallery.classList.add('hidden');
+    arr.forEach(it=>addResultGalleryGroup(it.label,it.cardHtml));
+  }else{
+    resultGallery.classList.remove('hidden');
+    const frag=document.createDocumentFragment();
+    arr.forEach(it=>{
+      const item=document.createElement('div');
+      item.className='gallery-item';
+      item.innerHTML=it.cardHtml;
+      frag.appendChild(item);
+    });
+    resultGallery.appendChild(frag);
+  }
 }
 
 filterPriceMin.addEventListener('input',renderResults);
@@ -193,22 +207,13 @@ sortPriceBtn.addEventListener('click',()=>{
   updateSortButtons();
   renderResults();
 });
-sortLocBtn.addEventListener('click',()=>{
-  if(sortField==='label'){sortDir*=-1;}else{sortField='label';sortDir=1;}
-  updateSortButtons();
+groupBtn.addEventListener('click',()=>{
+  groupByLocation=!groupByLocation;
+  groupBtn.textContent=groupByLocation?'🖼️':'📍';
+  groupBtn.title=groupByLocation?'Gruppierung aufheben':'Nach Ort gruppieren';
   renderResults();
 });
 updateSortButtons();
-
-resultsBox.addEventListener('click', e => {
-  if(e.target.id === 'btnToggleAll'){
-    const btn = e.target;
-    const open = btn.dataset.state !== 'open';
-    resultsBox.querySelectorAll('details').forEach(d => d.open = open);
-    btn.dataset.state = open ? 'open' : 'closed';
-    btn.textContent = open ? '▲' : '▼';
-  }
-});
 
 function clearInputFields(){
   ['start','ziel','query'].forEach(id=>{
@@ -231,6 +236,12 @@ $("#btnReset").addEventListener('click', () => {
   resultsBox.classList.add("hidden");
   if(routeLayer){ map.removeLayer(routeLayer); routeLayer=null; }
   clearResults();
+  groupByLocation=false;
+  groupBtn.textContent='📍';
+  groupBtn.title='Nach Ort gruppieren';
+  sortField='price';
+  sortDir=1;
+  updateSortButtons();
   setProgress(0);
   setProgressState(null,"0%");
 });
