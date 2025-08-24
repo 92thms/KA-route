@@ -535,7 +535,7 @@ async function run(){
   stepKm = stepOptions[Number(stepInput.value)] || stepKm;
 
   try{
-    const resp=await fetch('/route-search',{
+    const resp=await fetch('/api/route-search',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({start:startText, ziel:zielText, query:q, radius:rKm, step:stepKm, min_price:minPrice, max_price:maxPrice}),
