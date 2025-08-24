@@ -1,20 +1,23 @@
 # Klanavo
 
-Klanavo durchsucht eBay Kleinanzeigen entlang beliebiger Routen. Ein FastAPI-Backend liefert Inserate und ein leichtes Frontend zeigt sie direkt auf der Karte.
+Klanavo durchsucht eBay Kleinanzeigen entlang beliebiger Routen und zeigt die Treffer direkt auf einer Karte.
+
+## Funktionen
+- Routenplanung und Anzeige der Inserate auf einer Karte
+- Preisfilter, Gruppierung und Sortierung der Ergebnisse
+- Responsives Webfrontend
 
 ## Schnellstart
-
-1. `cp .env.example .env` und den eigenen ORS_API_KEY eintragen (der Schlüssel bleibt auf dem Server und wird nicht im Frontend verwendet). Für Reverse-Geocoding wird standardmäßig Nominatim genutzt; wer einen passenden ORS-Zugang hat, kann in der `.env` zusätzlich `USE_ORS_REVERSE=1` setzen.
+1. `cp .env.example .env` und eigenen `ORS_API_KEY` eintragen. Optional `USE_ORS_REVERSE=1` setzen.
 2. `docker-compose up --build`
 
-Der optionale Parameter USE_ORS_REVERSE lässt sich in `.env` anpassen. Suchradius und Punktabstand werden direkt im UI eingestellt.
+Das Frontend steht anschließend unter [http://localhost:8401](http://localhost:8401) bereit. Suchradius und Punktabstand werden im UI eingestellt. Ein Wartungsmodus lässt sich über `MAINTENANCE_MODE=1` und einen passenden `MAINTENANCE_KEY` aktivieren.
 
-Um einen Wartungsmodus zu aktivieren, können `MAINTENANCE_MODE=1` und ein passender `MAINTENANCE_KEY` in der `.env` gesetzt werden. Ohne gültigen Schlüssel zeigt die Anwendung nur einen Hinweis auf Wartungsarbeiten.
+## Entwicklung
+Backend und Frontend liegen unter `api/` bzw. `web/`. Das Backend basiert auf FastAPI und nutzt Playwright zum Scrapen. Die Weboberfläche ist statisch und benötigt keinen zusätzlichen Build-Schritt.
 
-Das Frontend steht anschließend unter http://localhost:8401 bereit.
+## Danksagung
+Die Ermittlung der Inserate baut auf der großartigen Arbeit der [ebay-kleinanzeigen-api](https://github.com/DanielWTE/ebay-kleinanzeigen-api) auf. Vielen Dank an die Entwickler des Projekts.
 
-## Bedienung
-
-Während der Suche kann über den Button **Abbrechen** der Vorgang sofort gestoppt werden. Bereits gefundene Ergebnisse bleiben erhalten. Mit **Neustart** wird die Anwendung komplett zurückgesetzt und alle Eingabefelder geleert.
-
-Der Quellcode befindet sich auf GitHub unter https://github.com/92thms/ka-route.
+## Lizenz
+[MIT](LICENSE)
