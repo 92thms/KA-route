@@ -13,6 +13,9 @@ import sys
 import time
 from pathlib import Path
 from typing import Optional
+import math
+
+from pydantic import BaseModel
 import inspect
 
 import os
@@ -44,6 +47,9 @@ browser_manager: PlaywrightManager | None = None
 RATE_LIMIT_SECONDS = 1.0
 _last_request: float = 0.0
 _rate_lock = asyncio.Lock()
+
+# Global cache for reverse geocoded postal codes
+_plz_cache: dict[str, str | None] = {}
 
 
 @app.middleware("http")
@@ -138,6 +144,141 @@ async def inserate(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     return {"data": results}
+
+
+class RouteSearchRequest(BaseModel):
+    start: str
+    ziel: str
+    radius: int = 10
+    step: int = 10
+    query: Optional[str] = None
+    min_price: Optional[int] = None
+    max_price: Optional[int] = None
+
+
+async def _geocode_text(client: httpx.AsyncClient, api_key: str, text: str) -> tuple[float, float]:
+    params = {"text": text, "boundary.country": "DE", "size": 1}
+    resp = await client.get(
+        "https://api.openrouteservice.org/geocode/search",
+        params=params,
+        headers={"Authorization": api_key},
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    coords = data["features"][0]["geometry"]["coordinates"]
+    return coords[0], coords[1]
+
+
+def _sample_route(coords: list[list[float]], step_m: float) -> list[list[float]]:
+    samples: list[list[float]] = []
+    acc = 0.0
+    prev = coords[0]
+    for cur in coords[1:]:
+        dx = (cur[0] - prev[0]) * 111320 * math.cos(math.radians((cur[1] + prev[1]) / 2))
+        dy = (cur[1] - prev[1]) * 110540
+        dist = math.hypot(dx, dy)
+        acc += dist
+        if acc >= step_m:
+            samples.append(cur)
+            acc = 0.0
+            prev = cur
+        else:
+            prev = cur
+    return samples
+
+
+async def _reverse_plz(client: httpx.AsyncClient, api_key: str, lat: float, lon: float) -> str | None:
+    key = f"{lat:.3f}|{lon:.3f}"
+    if key in _plz_cache:
+        return _plz_cache[key]
+    plz: str | None = None
+    try:
+        resp = await client.get(
+            "https://api.openrouteservice.org/geocode/reverse",
+            params={"point.lat": lat, "point.lon": lon, "size": 1},
+            headers={"Authorization": api_key},
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            plz = (
+                data.get("features", [{}])[0]
+                .get("properties", {})
+                .get("postalcode")
+            )
+    except Exception:
+        pass
+    if not plz:
+        try:
+            resp = await client.get(
+                "https://nominatim.openstreetmap.org/reverse",
+                params={
+                    "lat": lat,
+                    "lon": lon,
+                    "format": "jsonv2",
+                    "zoom": 10,
+                    "addressdetails": 1,
+                },
+                headers={"User-Agent": "ka-route/1.0"},
+            )
+            if resp.status_code == 200:
+                j = resp.json()
+                plz = j.get("address", {}).get("postcode")
+        except Exception:
+            pass
+    _plz_cache[key] = plz
+    return plz
+
+
+@app.post("/route-search")
+async def route_search(req: RouteSearchRequest) -> dict:
+    if browser_manager is None:  # pragma: no cover - should not happen
+        raise HTTPException(status_code=503, detail="Browser not initialised")
+    api_key = os.getenv("ORS_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="ORS_API_KEY not configured")
+
+    async with httpx.AsyncClient() as client:
+        start_ll = await _geocode_text(client, api_key, req.start)
+        ziel_ll = await _geocode_text(client, api_key, req.ziel)
+        resp = await client.post(
+            "https://api.openrouteservice.org/v2/directions/driving-car/geojson",
+            json={"coordinates": [start_ll, ziel_ll]},
+            headers={"Authorization": api_key},
+        )
+        resp.raise_for_status()
+        route = resp.json()
+        coords = route["features"][0]["geometry"]["coordinates"]
+
+        samples = _sample_route(coords, req.step * 1000)
+        plzs: set[str] = set()
+        for lon, lat in samples:
+            plz = await _reverse_plz(client, api_key, lat, lon)
+            if plz:
+                plzs.add(plz)
+
+        results: list[dict] = []
+        seen: set[str] = set()
+        for plz in plzs:
+            try:
+                items = await get_inserate_klaz(
+                    browser_manager=browser_manager,
+                    query=req.query,
+                    location=plz,
+                    radius=req.radius,
+                    min_price=req.min_price,
+                    max_price=req.max_price,
+                )
+            except Exception:
+                continue
+            for it in items:
+                url = it.get("url")
+                if url in seen:
+                    continue
+                seen.add(url)
+                it["plz"] = plz
+                results.append(it)
+
+    return {"route": coords, "listings": results}
 
 
 @app.get("/proxy")
