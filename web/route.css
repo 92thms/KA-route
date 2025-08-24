@@ -236,6 +236,7 @@
   .leaflet-popup-content::-webkit-scrollbar-thumb:hover{background:#3a3a3a}
   .leaflet-popup-content{ scrollbar-width: thin; scrollbar-color: #2a2a2a #0c0c0c; }
 
+  .analytics{max-width:900px;margin:0 auto 6px;text-align:center;font-size:12px}
   .app-footer{max-width:900px;margin:20px auto;display:flex;gap:10px;justify-content:center;color:var(--fg)}
   .app-footer a{color:var(--fg)}
 
