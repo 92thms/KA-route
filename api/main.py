@@ -12,7 +12,7 @@ import asyncio
 import sys
 import time
 from pathlib import Path
-from typing import Optional, Any
+from typing import Optional
 import math
 
 from pydantic import BaseModel
@@ -50,13 +50,6 @@ _rate_lock = asyncio.Lock()
 
 # Global cache for reverse geocoded postal codes
 _plz_cache: dict[str, str | None] = {}
-
-# Simple in-memory analytics counters
-_stats: dict[str, Any] = {
-    "searches_saved": 0,
-    "listings_found": 0,
-    "visitors": set(),
-}
 
 
 @app.middleware("http")
@@ -267,7 +260,7 @@ async def _reverse_plz(client: httpx.AsyncClient, api_key: str, lat: float, lon:
 
 @app.post("/route-search")
 @app.post("/api/route-search")
-async def route_search(req: RouteSearchRequest, request: Request) -> dict:
+async def route_search(req: RouteSearchRequest) -> dict:
     if browser_manager is None:  # pragma: no cover - should not happen
         raise HTTPException(status_code=503, detail="Browser not initialised")
     api_key = os.getenv("ORS_API_KEY")
@@ -316,22 +309,7 @@ async def route_search(req: RouteSearchRequest, request: Request) -> dict:
                 it["plz"] = plz
                 results.append(it)
 
-    _stats["searches_saved"] += 1
-    _stats["listings_found"] += len(results)
-    if request.client:
-        _stats["visitors"].add(request.client.host)
-
     return {"route": coords, "listings": results}
-
-
-@app.get("/stats")
-@app.get("/api/stats")
-def stats() -> dict[str, int]:
-    return {
-        "searches_saved": _stats["searches_saved"],
-        "listings_found": _stats["listings_found"],
-        "visitors": len(_stats["visitors"]),
-    }
 
 
 @app.get("/proxy")
