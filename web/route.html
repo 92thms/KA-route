@@ -42,22 +42,23 @@
   </div>
   <div class="group" id="grpSettings">
     <details>
-      <summary><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="icon"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"></path><circle cx="12" cy="12" r="3"></circle></svg> Einstellungen</summary>
-      <label for="radius" title="Umkreis der Suche">Suchradius: <span id="radiusVal"></span> km</label>
-      <input id="radius" type="range" min="0" max="2" step="1" value="1" list="radiusTicks" title="Umkreis der Suche">
-      <datalist id="radiusTicks">
-        <option value="0" label="5"></option>
-        <option value="1" label="10"></option>
-        <option value="2" label="20"></option>
-      </datalist>
-      <label for="step" title="Abstand zwischen Wegpunkten">Punktabstand: <span id="stepVal"></span> km</label>
-      <input id="step" type="range" min="0" max="2" step="1" value="1" list="stepTicks" title="Abstand zwischen Wegpunkten">
-      <datalist id="stepTicks">
-        <option value="0" label="5"></option>
-        <option value="1" label="10"></option>
-        <option value="2" label="20"></option>
-      </datalist>
-      <div id="rateLimitInfo" class="muted"></div>
+      <summary><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="icon"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"></path><circle cx="12" cy="12" r="3"></circle></svg> Einstellungen <span class="muted">– coming soon</span></summary>
+      <div class="hidden">
+        <label for="radius" title="Umkreis der Suche">Suchradius: <span id="radiusVal"></span> km</label>
+        <input id="radius" type="range" min="0" max="2" step="1" value="1" list="radiusTicks" title="Umkreis der Suche">
+        <datalist id="radiusTicks">
+          <option value="0" label="5"></option>
+          <option value="1" label="10"></option>
+          <option value="2" label="20"></option>
+        </datalist>
+        <label for="step" title="Abstand zwischen Wegpunkten">Punktabstand: <span id="stepVal"></span> km</label>
+        <input id="step" type="range" min="0" max="2" step="1" value="1" list="stepTicks" title="Abstand zwischen Wegpunkten">
+        <datalist id="stepTicks">
+          <option value="0" label="5"></option>
+          <option value="1" label="10"></option>
+          <option value="2" label="20"></option>
+        </datalist>
+      </div>
     </details>
   </div>
   <div class="group" id="grpRun">
@@ -99,6 +100,8 @@
 </div>
 
 </div> <!-- end app -->
+
+<div id="analytics" class="analytics muted"></div>
 
 <footer class="app-footer">
   <a href="https://github.com/92thms/ka-route" target="_blank" rel="noopener" title="GitHub">
