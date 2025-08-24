@@ -202,6 +202,48 @@ $("#btnReset").addEventListener('click', () => {
 // -------- Debounce --------
 function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};}
 
+// -------- Autocomplete --------
+function setupSuggest(id){
+  const inp=document.getElementById(id);
+  const list=document.getElementById(id+"-suggest");
+  if(!inp||!list) return;
+  const render=items=>{
+    list.innerHTML="";
+    if(!items.length){ list.hidden=true; return; }
+    items.forEach(txt=>{
+      const li=document.createElement("li");
+      li.textContent=txt;
+      li.addEventListener("mousedown",()=>{ inp.value=txt; list.hidden=true; });
+      list.appendChild(li);
+    });
+    list.hidden=false;
+  };
+  const fetchSuggestions=debounce(async text=>{
+    text=text.trim();
+    if(!text){ render([]); return; }
+    let labels=[];
+    try{
+      const url=`/ors/geocode/autocomplete?text=${encodeURIComponent(text)}&boundary.country=DE&size=5`;
+      const res=await fetch(url,{headers:{"Accept":"application/json"}});
+      if(!res.ok) throw new Error("ORS autocomplete failed");
+      const j=await res.json();
+      labels=j?.features?.map(f=>f.properties.label).filter(Boolean)||[];
+    }catch(_){
+      try{
+        const url=`https://nominatim.openstreetmap.org/search?format=json&limit=5&addressdetails=1&countrycodes=de&q=${encodeURIComponent(text)}`;
+        const j=await fetchJsonViaProxy(url);
+        labels=j?.map(r=>r.display_name).filter(Boolean)||[];
+      }catch(_){ labels=[]; }
+    }
+    render(labels);
+  },300);
+  inp.addEventListener("input",e=>fetchSuggestions(e.target.value));
+  inp.addEventListener("blur",()=>setTimeout(()=>list.hidden=true,100));
+}
+
+setupSuggest("start");
+setupSuggest("ziel");
+
 // -------- Distanz-Helpers --------
 function haversine(lat1,lon1,lat2,lon2){
   const R=6371e3, toRad=d=>d*Math.PI/180;
@@ -393,12 +435,15 @@ async function reversePLZ(postal){
 async function geocodeTextOnce(text){
   try{
     const url=`/ors/geocode/search?text=${encodeURIComponent(text)}&boundary.country=DE&size=1`;
-    const j=await fetch(url,{headers:{"Accept":"application/json"},signal:abortCtrl?.signal}).then(r=>r.json());
+    const res=await fetch(url,{headers:{"Accept":"application/json"},signal:abortCtrl?.signal});
+    if(!res.ok) throw new Error("ORS geocode failed");
+    const j=await res.json();
     const f=j?.features?.[0];
     if(f){
       const lat=f.geometry.coordinates[1], lon=f.geometry.coordinates[0];
       return {lat,lon,label:f.properties.label||text};
     }
+    throw new Error("No ORS result");
   }catch(_){
     const url=`https://nominatim.openstreetmap.org/search?format=json&limit=1&addressdetails=1&countrycodes=de&q=${encodeURIComponent(text)}`;
     const j=await fetchJsonViaProxy(url);
