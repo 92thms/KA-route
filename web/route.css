@@ -10,6 +10,8 @@
   a:hover{color:#d5e2ff;text-decoration:underline}
   .hidden{display:none!important}
 
+  .icon{width:16px;height:16px}
+
   #maintenance{max-width:400px;margin:100px auto;text-align:center}
   #maintenance input{width:100%;margin:10px 0}
 
@@ -144,7 +146,8 @@
   #resultsControls .sort-icons{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
   #resultsControls .sort-icons .icon-buttons{display:flex;gap:4px}
   #resultsControls .sort-icons .sort-label{font-size:12px}
-  #resultsControls .sort-icons button{background:none;border:1px solid var(--border);border-radius:6px;padding:4px 6px;cursor:pointer}
+  #resultsControls .sort-icons button{background:none;border:1px solid var(--border);border-radius:6px;padding:4px 6px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  #resultsControls .sort-icons button .icon + .icon{margin-left:2px}
   #results strong{margin:0}
   .row{padding:6px 0;border-bottom:1px dashed #444}.row:last-child{border-bottom:0}
   .muted{color:#aaa}
