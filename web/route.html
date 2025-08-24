@@ -41,13 +41,6 @@
     <select id="category"></select>
   </div>
   -->
-  <div class="group" id="grpPrice">
-    <label for="priceMin">Preis (€)</label>
-    <div class="price-range">
-      <input id="priceMin" type="number" placeholder="Von">
-      <input id="priceMax" type="number" placeholder="Bis">
-    </div>
-  </div>
   <div class="group" id="grpSettings">
     <details>
       <summary>⚙ Einstellungen</summary>
@@ -84,7 +77,19 @@
 </div>
 
 <div id="panel">
-  <div id="results" class="hidden"><div class="results-header"><strong>Ergebnisliste</strong><button id="btnToggleAll" class="toggle-all" data-state="closed" title="Alle ausklappen">▼</button></div></div>
+  <div id="results" class="hidden">
+    <div class="results-header"><strong>Ergebnisliste</strong><button id="btnToggleAll" class="toggle-all" data-state="closed" title="Alle ausklappen">▼</button></div>
+    <div id="resultsControls">
+      <div class="price-range">
+        <input id="filterPriceMin" type="number" placeholder="Preis von">
+        <input id="filterPriceMax" type="number" placeholder="bis">
+      </div>
+      <div class="sort-icons">
+        <button id="sortLocation" data-dir="asc" title="Nach Ort sortieren">📍</button>
+        <button id="sortPrice" data-dir="asc" title="Nach Preis sortieren">€</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 </div> <!-- end app -->

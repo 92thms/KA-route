@@ -138,6 +138,9 @@
   #panel{display:flex;flex-direction:column;gap:10px;padding:12px}
   #results{border:1px solid var(--border);border-radius:10px;padding:12px;background:var(--card)}
   #results .results-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+  #resultsControls{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+  #resultsControls .price-range input{width:80px}
+  #resultsControls .sort-icons button{background:none;border:1px solid var(--border);border-radius:6px;padding:4px 6px;cursor:pointer}
   #results strong{margin:0}
   #results .toggle-all{background:none;border:none;color:var(--fg);cursor:pointer;font-size:14px}
   .row{padding:6px 0;border-bottom:1px dashed #444}.row:last-child{border-bottom:0}
