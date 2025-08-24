@@ -158,15 +158,40 @@ class RouteSearchRequest(BaseModel):
 
 async def _geocode_text(client: httpx.AsyncClient, api_key: str, text: str) -> tuple[float, float]:
     params = {"text": text, "boundary.country": "DE", "size": 1}
-    resp = await client.get(
-        "https://api.openrouteservice.org/geocode/search",
-        params=params,
-        headers={"Authorization": api_key},
-    )
-    resp.raise_for_status()
-    data = resp.json()
-    coords = data["features"][0]["geometry"]["coordinates"]
-    return coords[0], coords[1]
+    try:
+        resp = await client.get(
+            "https://api.openrouteservice.org/geocode/search",
+            params=params,
+            headers={"Authorization": api_key},
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        features = data.get("features") or []
+        if features:
+            coords = features[0]["geometry"]["coordinates"]
+            return coords[0], coords[1]
+    except Exception:
+        pass
+
+    try:
+        resp = await client.get(
+            "https://nominatim.openstreetmap.org/search",
+            params={
+                "q": text,
+                "format": "jsonv2",
+                "limit": 1,
+                "countrycodes": "de",
+            },
+            headers={"User-Agent": "ka-route/1.0"},
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        if data:
+            return float(data[0]["lon"]), float(data[0]["lat"])
+    except Exception:
+        pass
+
+    raise HTTPException(status_code=502, detail="Geocoding failed")
 
 
 def _sample_route(coords: list[list[float]], step_m: float) -> list[list[float]]:
