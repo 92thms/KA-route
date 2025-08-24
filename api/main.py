@@ -1,10 +1,4 @@
-"""API service for Klanavo.
-
-Previously the application exposed only a health-check endpoint and returned
-an empty payload for ``/inserate``.  This file now wires up the real
-``ebay-kleinanzeigen-api`` scraper so that search queries return actual
-classified ads instead of a static placeholder.
-"""
+"""API service for Klanavo."""
 
 from __future__ import annotations
 
@@ -26,9 +20,7 @@ from fastapi import FastAPI, HTTPException, Request, Response
 import httpx
 
 
-# Make the vendored ``ebay-kleinanzeigen-api`` package importable.  The project
-# lives under ``api/ebay-kleinanzeigen-api`` within this repository, so we add
-# that directory to ``sys.path``.
+# Add the local Kleinanzeigen scraper to the import path
 SCRAPER_DIR = Path(__file__).resolve().parent / "ebay-kleinanzeigen-api"
 sys.path.insert(0, str(SCRAPER_DIR))
 

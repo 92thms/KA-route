@@ -84,7 +84,7 @@ async function fetchRateLimits(){
         fetchRateLimits()
       ]);
       const parts=[];
-      if(stats.searches_saved!=null) parts.push(`eingesparte Suchen: ${stats.searches_saved}`);
+      if(stats.searches_saved!=null) parts.push(`gestartete Suchen: ${stats.searches_saved}`);
       if(stats.listings_found!=null) parts.push(`gecrawlte Inserate: ${stats.listings_found}`);
       if(stats.visitors!=null) parts.push(`Besucher: ${stats.visitors}`);
       if(limits.geocode&&limits.geocode.limit&&limits.geocode.remaining&&limits.directions&&limits.directions.limit&&limits.directions.remaining){

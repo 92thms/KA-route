@@ -139,9 +139,9 @@
   #results{border:1px solid var(--border);border-radius:10px;padding:12px;background:var(--card)}
   #results .results-header{display:flex;justify-content:flex-start;align-items:center;margin-bottom:6px}
   #resultsControls{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
-  #resultsControls .price-range{display:flex;flex-direction:column;gap:4px}
-  #resultsControls .price-range .range-inputs{display:flex;gap:4px}
-  #resultsControls .price-range .range-inputs input{flex:1}
+  #resultsControls .price-range{display:flex;flex-direction:column;gap:4px;flex:1 1 180px}
+  #resultsControls .price-range .range-inputs{display:flex;gap:4px;flex-wrap:wrap}
+  #resultsControls .price-range .range-inputs input{flex:1 1 100px;min-width:0}
   #resultsControls .price-range label{font-size:12px}
   #resultsControls .sort-icons{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
   #resultsControls .sort-icons .icon-buttons{display:flex;gap:4px}
