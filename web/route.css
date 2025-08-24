@@ -51,8 +51,6 @@
     border:1px solid var(--border);border-radius:10px
   }
   header .group{display:flex;flex-direction:column;gap:4px;flex:1;min-width:240px}
-  header .group .price-range{display:flex;gap:4px}
-  header .group .price-range input{flex:1}
   #grpSettings,#grpRun{flex:1 1 100%}
   #grpSettings details{display:flex;flex-direction:column;gap:4px;width:100%}
   #grpSettings summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:4px;font-weight:700}
@@ -139,7 +137,10 @@
   #results{border:1px solid var(--border);border-radius:10px;padding:12px;background:var(--card)}
   #results .results-header{display:flex;justify-content:flex-start;align-items:center;margin-bottom:6px}
   #resultsControls{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
-  #resultsControls .price-range input{width:80px}
+  #resultsControls .price-range{display:flex;flex-direction:column;gap:4px}
+  #resultsControls .price-range .range-inputs{display:flex;gap:4px}
+  #resultsControls .price-range .range-inputs input{flex:1}
+  #resultsControls .price-range label{font-size:12px}
   #resultsControls .sort-icons button{background:none;border:1px solid var(--border);border-radius:6px;padding:4px 6px;cursor:pointer}
   #results strong{margin:0}
   .row{padding:6px 0;border-bottom:1px dashed #444}.row:last-child{border-bottom:0}
