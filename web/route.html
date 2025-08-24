@@ -33,14 +33,12 @@
   </div>
   <div class="group" id="grpQuery">
     <label for="query">Suchbegriff</label>
-    <input id="query" placeholder="Suchbegriff">
+    <input id="query" placeholder="Suchbegriff" required>
   </div>
-  <!-- Kategorien vorerst deaktiviert
   <div class="group" id="grpCategory">
     <label for="category">Kategorie</label>
     <select id="category"></select>
   </div>
-  -->
   <div class="group" id="grpSettings">
     <details>
       <summary>⚙ Einstellungen</summary>
@@ -81,8 +79,11 @@
     <div class="results-header"><strong>Ergebnisliste</strong></div>
     <div id="resultsControls">
       <div class="price-range">
-        <input id="filterPriceMin" type="number" placeholder="Preis von">
-        <input id="filterPriceMax" type="number" placeholder="bis">
+        <label for="filterPriceMin">Preisfilter</label>
+        <div class="range-inputs">
+          <input id="filterPriceMin" type="text" placeholder="von">
+          <input id="filterPriceMax" type="text" placeholder="bis">
+        </div>
       </div>
       <div class="sort-icons">
         <button id="toggleGrouping" title="Nach Ort gruppieren">📍</button>

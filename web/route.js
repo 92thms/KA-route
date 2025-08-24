@@ -31,8 +31,7 @@ let rKm = Number(CONFIG.SEARCH_RADIUS_KM) || 10;
 let stepKm = Number(CONFIG.STEP_KM) || 10;
 // Alle Nominatim-Anfragen werden über einen Proxy geleitet,
 // daher sind keine speziellen Header mehr nötig.
-// Kategorien vorerst deaktiviert
-// const categoryMap = {};
+const categoryMap = {};
 
 function escapeHtml(str){
   return String(str).replace(/[&<>"']/g, s => ({
@@ -53,6 +52,7 @@ const resultMarkers = L.layerGroup().addTo(map);
 // Shorthands
 const $=sel=>document.querySelector(sel);
 const startGroup=$("#grpStart"), zielGroup=$("#grpZiel"), queryGroup=$("#grpQuery"), settingsGroup=$("#grpSettings"), runGroup=$("#grpRun"), resetGroup=$("#grpReset"), mapBox=$("#map-box"), resultsBox=$("#results"), resultGallery=$("#resultGallery");
+const categorySelect=$("#category");
 const radiusInput=$("#radius"), stepInput=$("#step"), radiusVal=$("#radiusVal"), stepVal=$("#stepVal"), rateLimitInfo=$("#rateLimitInfo"), filterPriceMin=$("#filterPriceMin"), filterPriceMax=$("#filterPriceMax"), sortPriceBtn=$("#sortPrice"), groupBtn=$("#toggleGrouping");
 const radiusIdx=radiusOptions.indexOf(rKm);
 radiusInput.value=radiusIdx>=0?radiusIdx:1;
@@ -80,7 +80,6 @@ async function updateRateLimitInfo(){
 
   updateRateLimitInfo();
 
-/* Kategorien-Funktion vorerst deaktiviert
 async function loadCategories(){
   if(!categorySelect) return;
   categorySelect.innerHTML='<option value="">Alle Kategorien</option>';
@@ -103,7 +102,6 @@ function extractCategoryId(url){
   const m=url.match(/(\d+)-(\d+)(?:-\d+)?\.html?$/);
   return m?m[2]:null;
 }
-*/
 // Progress-Helfer
 function setProgress(pct){
   const bar = $("#progressBar"), txt = $("#progressText");
@@ -161,9 +159,25 @@ const resultItems=[];
 let sortField='price';
 let sortDir=1; // 1=asc, -1=desc
 
+const GROUP_NONE=0, GROUP_LOCATION=1, GROUP_CATEGORY=2;
+let groupMode=GROUP_NONE;
+
 function parsePriceVal(str){
-  const n=Number(str.replace(/[^0-9]/g,''));
-  return Number.isNaN(n)?0:n;
+  const cleaned=String(str).replace(/VB/i,'').replace(/€/g,'').replace(/\u00a0/g,'').trim();
+  if(cleaned==='') return 0;
+  const num=parseFloat(cleaned.replace(/\./g,'').replace(',', '.'));
+  return Number.isNaN(num)?0:num;
+}
+
+function parsePriceInput(str){
+  const cleaned=str.replace(/\./g,'').replace(/,/g,'.').replace(/[^0-9.]/g,'');
+  const num=parseFloat(cleaned);
+  return Number.isNaN(num)?null:num;
+}
+
+function formatPriceInput(el){
+  const val=parsePriceInput(el.value);
+  if(val!==null){ el.value=new Intl.NumberFormat('de-DE').format(val); }
 }
 
 function updateSortButtons(){
@@ -174,8 +188,8 @@ function renderResults(){
   resultsBox.querySelectorAll('.groupbox').forEach(el=>el.remove());
   groups.clear();
   resultGallery.innerHTML='';
-  const min=filterPriceMin.value.trim()===''?null:Number(filterPriceMin.value);
-  const max=filterPriceMax.value.trim()===''?null:Number(filterPriceMax.value);
+  const min=parsePriceInput(filterPriceMin.value.trim());
+  const max=parsePriceInput(filterPriceMax.value.trim());
   let arr=resultItems.filter(it=>{
     if(min!==null && it.priceVal<min) return false;
     if(max!==null && it.priceVal>max) return false;
@@ -184,10 +198,7 @@ function renderResults(){
   if(sortField==='price'){
     arr.sort((a,b)=> (a.priceVal-b.priceVal)*sortDir);
   }
-  if(groupByLocation){
-    resultGallery.classList.add('hidden');
-    arr.forEach(it=>addResultGalleryGroup(it.label,it.cardHtml));
-  }else{
+  if(groupMode===GROUP_NONE){
     resultGallery.classList.remove('hidden');
     const frag=document.createDocumentFragment();
     arr.forEach(it=>{
@@ -197,20 +208,36 @@ function renderResults(){
       frag.appendChild(item);
     });
     resultGallery.appendChild(frag);
+  }else{
+    resultGallery.classList.add('hidden');
+    arr.forEach(it=>{
+      const key=groupMode===GROUP_LOCATION?it.label:(it.category||'Unbekannt');
+      addResultGalleryGroup(key,it.cardHtml);
+    });
   }
 }
 
-filterPriceMin.addEventListener('input',renderResults);
-filterPriceMax.addEventListener('input',renderResults);
+filterPriceMin.addEventListener('input',()=>renderResults());
+filterPriceMax.addEventListener('input',()=>renderResults());
+filterPriceMin.addEventListener('blur',()=>{formatPriceInput(filterPriceMin);renderResults();});
+filterPriceMax.addEventListener('blur',()=>{formatPriceInput(filterPriceMax);renderResults();});
 sortPriceBtn.addEventListener('click',()=>{
   if(sortField==='price'){sortDir*=-1;}else{sortField='price';sortDir=1;}
   updateSortButtons();
   renderResults();
 });
 groupBtn.addEventListener('click',()=>{
-  groupByLocation=!groupByLocation;
-  groupBtn.textContent=groupByLocation?'🖼️':'📍';
-  groupBtn.title=groupByLocation?'Gruppierung aufheben':'Nach Ort gruppieren';
+  groupMode=(groupMode+1)%3;
+  if(groupMode===GROUP_NONE){
+    groupBtn.textContent='📍';
+    groupBtn.title='Nach Ort gruppieren';
+  }else if(groupMode===GROUP_LOCATION){
+    groupBtn.textContent='🗂️';
+    groupBtn.title='Nach Kategorie gruppieren';
+  }else{
+    groupBtn.textContent='🖼️';
+    groupBtn.title='Gruppierung aufheben';
+  }
   renderResults();
 });
 updateSortButtons();
@@ -222,6 +249,7 @@ function clearInputFields(){
   });
   filterPriceMin.value='';
   filterPriceMax.value='';
+  if(categorySelect) categorySelect.value='';
 }
 
 $("#btnReset").addEventListener('click', () => {
@@ -236,7 +264,7 @@ $("#btnReset").addEventListener('click', () => {
   resultsBox.classList.add("hidden");
   if(routeLayer){ map.removeLayer(routeLayer); routeLayer=null; }
   clearResults();
-  groupByLocation=false;
+  groupMode=GROUP_NONE;
   groupBtn.textContent='📍';
   groupBtn.title='Nach Ort gruppieren';
   sortField='price';
@@ -388,19 +416,16 @@ async function fetchJsonViaProxy(url){
 
 // -------- Preisformat --------
 function formatPrice(p){
-  if(!p) return "VB oder Kostenlos";
-  const n = String(p).trim();
-  if(n === "") return "VB oder Kostenlos";
-  const hasVB = /VB/i.test(n);
-  if(hasVB){
-    const digits = n.replace(/[^0-9]/g,'');
-    if(digits) return new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'}).format(Number(digits))+' VB';
-    return 'VB';
-  }
-  if(/[€]/.test(n)) return n;
-  const digits=n.replace(/[^0-9]/g,'');
-  if(!digits) return "VB oder Kostenlos";
-  return new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'}).format(Number(digits));
+  if(!p) return "VB";
+  const n=String(p).trim();
+  if(n==='') return "VB";
+  const hasVB=/VB/i.test(n);
+  const cleaned=n.replace(/VB/i,'').replace(/€/g,'').trim();
+  if(cleaned==='') return 'VB';
+  const num=parseFloat(cleaned.replace(/\./g,'').replace(',', '.'));
+  if(Number.isNaN(num)) return 'VB';
+  const formatted=new Intl.NumberFormat('de-DE',{style:'currency',currency:'EUR'}).format(num).replace(/\u00a0/g,'');
+  return hasVB?`${formatted} VB`:formatted;
 }
 
 // -------- Parsing --------
@@ -653,6 +678,10 @@ async function run(){
   const zielText=$("#ziel").value.trim();
   rKm = radiusOptions[Number(radiusInput.value)] || rKm;
   stepKm = stepOptions[Number(stepInput.value)] || stepKm;
+  if(!q){
+    setStatus("Bitte Suchbegriff eingeben.", true);
+    return;
+  }
   if(!startText || !zielText){
     setStatus("Bitte Start und Ziel eingeben.", true);
     return;
@@ -672,10 +701,13 @@ async function run(){
   setProgress(0);
 
   try{
+    const catVal=categorySelect?Number(categorySelect.value):NaN;
+    const payload={start:startText, ziel:zielText, query:q, radius:rKm, step:stepKm};
+    if(!Number.isNaN(catVal)) payload.category=catVal;
     const resp=await fetch('/api/route-search',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({start:startText, ziel:zielText, query:q, radius:rKm, step:stepKm}),
+      body:JSON.stringify(payload),
       signal:abortCtrl.signal
     });
     let data=null;
@@ -706,9 +738,11 @@ async function run(){
         const dist=minDistToRouteMeters(info.lat,info.lon,coords);
         if(dist/1000<=rKm){
           const imgHtml=info.image?`<img src="${escapeHtml(info.image)}" alt="">`:"";
-          const cardHtml=`${imgHtml}<a href="${escapeHtml(it.url)}" target="_blank" rel="noopener"><strong>${escapeHtml(it.title)}</strong></a><div class="muted">${escapeHtml(info.price)}</div>`;
+          const catId=extractCategoryId(it.url);
+          const catName=catId?categoryMap[catId]||'Unbekannt':'Unbekannt';
+          const cardHtml=`${imgHtml}<a href="${escapeHtml(it.url)}" target="_blank" rel="noopener"><strong>${escapeHtml(it.title)}</strong></a><div class="muted">${escapeHtml(info.price)} – ${escapeHtml(catName)}</div>`;
           const label=info.label||it.plz||"?";
-          resultItems.push({label,cardHtml,priceVal:parsePriceVal(info.price)});
+          resultItems.push({label,cardHtml,priceVal:parsePriceVal(info.price),category:catName});
           addListingToClusters(info.lat,info.lon,cardHtml,label);
           added++;
           renderResults();

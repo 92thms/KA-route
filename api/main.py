@@ -94,6 +94,7 @@ async def inserate(
     radius: int = 10,
     min_price: Optional[int] = None,
     max_price: Optional[int] = None,
+    category: Optional[int] = None,
     page_count: int = 1,
 ) -> dict[str, list]:
     """Return classifieds scraped from eBay Kleinanzeigen.
@@ -136,6 +137,8 @@ async def inserate(
             kwargs["min_price"] = min_price
         if "max_price" in params and max_price is not None:
             kwargs["max_price"] = max_price
+        if "category_id" in params and category is not None:
+            kwargs["category_id"] = category
         if "page_count" in params:
             kwargs["page_count"] = page_count
 
@@ -154,6 +157,7 @@ class RouteSearchRequest(BaseModel):
     query: Optional[str] = None
     min_price: Optional[int] = None
     max_price: Optional[int] = None
+    category: Optional[int] = None
 
 
 async def _geocode_text(client: httpx.AsyncClient, api_key: str, text: str) -> tuple[float, float]:
@@ -293,6 +297,7 @@ async def route_search(req: RouteSearchRequest) -> dict:
                     radius=req.radius,
                     min_price=req.min_price,
                     max_price=req.max_price,
+                    category_id=req.category,
                 )
             except Exception:
                 continue
