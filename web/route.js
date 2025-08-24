@@ -308,6 +308,16 @@ function distPointSegMeters(lat, lon, seg){
   const dx=x-xx, dy=y-yy;
   return Math.sqrt(dx*dx+dy*dy);
 }
+function minDistToRouteMeters(lat, lon, coords){
+  if(!coords||coords.length<2) return Infinity;
+  let min=Infinity;
+  for(let i=1;i<coords.length;i++){
+    const seg={lat1:coords[i-1][1],lon1:coords[i-1][0],lat2:coords[i][1],lon2:coords[i][0]};
+    const d=distPointSegMeters(lat,lon,seg);
+    if(d<min) min=d;
+  }
+  return min;
+}
 // -------- Proxy fetch --------
 async function fetchViaProxy(url){
   const prox=`/proxy?u=${encodeURIComponent(url)}`;
@@ -344,20 +354,28 @@ async function parseListingDetails(html){
   const doc=new DOMParser().parseFromString(html,'text/html');
   const title=doc.querySelector('meta[property="og:title"]')?.content||doc.title||null;
   let image=doc.querySelector('meta[property="og:image"]')?.content||null;
-  let postal=null, cityText=null;
+  let postal=null, cityText=null, lat=null, lon=null;
 
   // 1) JSON-LD
   doc.querySelectorAll('script[type="application/ld+json"]').forEach(s=>{
     try{
       const obj=JSON.parse(s.textContent);
       const addr=obj.address||obj.itemOffered?.address||obj.offers?.seller?.address;
-      if(addr){ postal=postal||addr.postalCode||addr.postcode||addr.zip; cityText=cityText||addr.addressLocality||addr.city||addr.town; }
+      if(addr){
+        postal=postal||addr.postalCode||addr.postcode||addr.zip;
+        cityText=cityText||addr.addressLocality||addr.city||addr.town;
+      }
       if(!image && obj.image){ image=Array.isArray(obj.image)?obj.image[0]:(typeof obj.image==='string'?obj.image:null); }
+      const g=obj.geo||obj.location||obj.address?.geo;
+      if(g){
+        const la=parseFloat(g.latitude||g.lat); const lo=parseFloat(g.longitude||g.lon||g.lng);
+        if(!Number.isNaN(la)&&!Number.isNaN(lo)){ lat=lat??la; lon=lon??lo; }
+      }
     }catch(_){}
   });
 
   // 2) __INITIAL_STATE__
-  if(!postal||!cityText){
+  if(!postal||!cityText||lat===null||lon===null){
     doc.querySelectorAll('script').forEach(s=>{
       const t=s.textContent||'';
       if(t.includes('__INITIAL_STATE__')){
@@ -365,7 +383,15 @@ async function parseListingDetails(html){
         if(start>=0&&end>start){
           const st=safeParse(t.slice(start,end+1));
           const a=st?.ad?.adAddress||st?.adInfo?.address||st?.adData?.address||null;
-          if(a){ postal=postal||a.postalCode||a.postcode||a.zipCode; cityText=cityText||a.city||a.town||a.addressLocality; }
+          if(a){
+            postal=postal||a.postalCode||a.postcode||a.zipCode;
+            cityText=cityText||a.city||a.town||a.addressLocality;
+            const g=a.geo||a.coordinates||a.location;
+            if(g){
+              const la=parseFloat(g.lat||g.latitude); const lo=parseFloat(g.lon||g.lng||g.longitude);
+              if(!Number.isNaN(la)&&!Number.isNaN(lo)){ lat=lat??la; lon=lon??lo; }
+            }
+          }
         }
       }
     });
@@ -390,6 +416,11 @@ async function parseListingDetails(html){
     });
     if(filtered.length) postal=filtered[0].code;
   }
+  if(lat===null||lon===null){
+    const lm=html.match(/"(?:latitude|lat)"\s*:\s*([0-9.+-]+)/i);
+    const lom=html.match(/"(?:longitude|lon|lng)"\s*:\s*([0-9.+-]+)/i);
+    if(lm&&lom){ lat=parseFloat(lm[1]); lon=parseFloat(lom[1]); }
+  }
 
   // Preis
   let price=null;
@@ -398,7 +429,7 @@ async function parseListingDetails(html){
         ||html.match(/([0-9][0-9\., ]* ?€)/);
   if(pm) price=pm[1].toString().trim();
 
-  return {title,postal,cityText,price:formatPrice(price),image};
+  return {title,postal,cityText,price:formatPrice(price),image,lat,lon};
 }
 
 async function reversePLZ(postal){
@@ -462,14 +493,20 @@ async function enrichListing(it,wantDetails=true){
       if(det.price) price=det.price;
       if(det.image) image=det.image;
       postal=det.postal; cityText=det.cityText;
+      if(det.lat!=null && det.lon!=null){ lat=det.lat; lon=det.lon; }
     }catch(e){ setStatus("Proxy/Parse-Fehler: "+e.message,true); }
   }
-  if(postal){
-    const g=await reversePLZ(postal);
-    lat=g.lat;lon=g.lon;label=g.display;
-  } else if(cityText){
-    const g=await geocodeTextOnce(cityText+", Deutschland");
-    lat=g.lat;lon=g.lon;label=g.label;
+  if(lat===null||lon===null){
+    if(postal){
+      const g=await reversePLZ(postal);
+      lat=g.lat;lon=g.lon;label=g.display;
+    } else if(cityText){
+      const g=await geocodeTextOnce(cityText+", Deutschland");
+      lat=g.lat;lon=g.lon;label=g.label;
+    }
+  }
+  if(!label){
+    label = `${postal||""}${cityText?` ${cityText}`:""}`.trim();
   }
   return {lat,lon,label,price,image,postal};
 }
@@ -606,14 +643,25 @@ async function run(){
       L.marker(zielLatLng,{icon:redIcon}).addTo(resultMarkers).bindPopup("Ziel");
     }
     const items=data.listings||[];
-    items.forEach(it=>{
-      const price=formatPrice(it.price||"");
-      const cardHtml=`<a href="${escapeHtml(it.url)}" target="_blank" rel="noopener"><strong>${escapeHtml(it.title)}</strong></a><div class="muted">${escapeHtml(price)}</div>`;
-      addResultGalleryGroup(it.plz||"?", cardHtml);
-    });
+    let added=0;
+    for(let i=0;i<items.length;i++){
+      const it=items[i];
+      if(abortCtrl?.signal.aborted) break;
+      const info=await enrichListing(it,true);
+      if(info.lat!=null && info.lon!=null){
+        const dist=minDistToRouteMeters(info.lat,info.lon,coords);
+        if(dist/1000<=rKm){
+          const imgHtml=info.image?`<img src="${escapeHtml(info.image)}" alt="">`:"";
+          const cardHtml=`${imgHtml}<a href="${escapeHtml(it.url)}" target="_blank" rel="noopener"><strong>${escapeHtml(it.title)}</strong></a><div class="muted">${escapeHtml(info.price)}</div>`;
+          addResultGalleryGroup(info.label||it.plz||"?", cardHtml);
+          addListingToClusters(info.lat,info.lon,`<a href="${escapeHtml(it.url)}" target="_blank" rel="noopener">${escapeHtml(it.title)}</a>`, info.label||it.plz||"?");
+          added++;
+        }
+      }
+      setProgress(Math.min(100, Math.round(((i+1)/items.length)*100)));
+    }
     setStatus("Fertig.");
-    setProgress(100);
-    setProgressState("done", `Fertig – ${items.length} Inserate`);
+    setProgressState("done", `Fertig – ${added} Inserate`);
     runGroup.classList.add("hidden");
     resetGroup.classList.remove("hidden");
   }catch(e){
