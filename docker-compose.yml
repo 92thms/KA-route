@@ -1,0 +1,18 @@
+services:
+  klanavo:
+    build:
+      context: .              # <— Projekt-Root als Kontext
+      dockerfile: ops/Dockerfile
+    container_name: klanavo
+    ports:
+      - "8401:80"
+    restart: unless-stopped
+    shm_size: "1g"
+    ipc: host
+    environment:
+      ORS_API_KEY: ${ORS_API_KEY}
+      MAINTENANCE_MODE: ${MAINTENANCE_MODE:-0}
+      MAINTENANCE_KEY: ${MAINTENANCE_KEY:-}
+      USE_ORS_REVERSE: ${USE_ORS_REVERSE:-0}
+    volumes:
+      - ./data:/data
