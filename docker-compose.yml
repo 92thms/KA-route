@@ -14,3 +14,5 @@ services:
       MAINTENANCE_MODE: ${MAINTENANCE_MODE:-0}
       MAINTENANCE_KEY: ${MAINTENANCE_KEY:-}
       USE_ORS_REVERSE: ${USE_ORS_REVERSE:-0}
+    volumes:
+      - ./data:/data

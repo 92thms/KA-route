@@ -11,6 +11,10 @@ Klanavo durchsucht eBay Kleinanzeigen entlang beliebiger Routen und zeigt die Tr
 1. `cp .env.example .env` und eigenen `ORS_API_KEY` eintragen. Optional `USE_ORS_REVERSE=1` setzen.
 2. `docker-compose up --build`
 
+Nutzungsstatistiken werden in `data/stats.json` gespeichert. Das Verzeichnis
+ist als Volume eingebunden, sodass die Werte auch nach einem Update erhalten
+bleiben. IP-Adressen werden dabei gehasht.
+
 Das Frontend steht anschließend unter [http://localhost:8401](http://localhost:8401) bereit. Suchradius und Punktabstand werden im UI eingestellt. Ein Wartungsmodus lässt sich über `MAINTENANCE_MODE=1` und einen passenden `MAINTENANCE_KEY` aktivieren.
 
 ## Entwicklung

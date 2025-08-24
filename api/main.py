@@ -45,8 +45,8 @@ _rate_lock = asyncio.Lock()
 # Global cache for reverse geocoded postal codes
 _plz_cache: dict[str, str | None] = {}
 
-# Simple analytics storage
-_STATS_FILE = Path(__file__).with_name("stats.json")
+# Simple analytics storage; allow custom path via env variable
+_STATS_FILE = Path(os.environ.get("STATS_FILE", "/data/stats.json"))
 
 
 def _load_stats() -> dict[str, Any]:
@@ -70,6 +70,7 @@ def _persist_stats() -> None:
         "visitors": list(_stats.get("visitors", set())),
     }
     try:
+        _STATS_FILE.parent.mkdir(parents=True, exist_ok=True)
         _STATS_FILE.write_text(json.dumps(data))
     except Exception:
         pass
