@@ -139,6 +139,17 @@ let sortDir=1; // 1=asc, -1=desc
 const GROUP_NONE=0, GROUP_LOCATION=1, GROUP_CATEGORY=2;
 let groupMode=GROUP_NONE;
 
+const ICONS={
+  location:`<svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"></path><circle cx="12" cy="10" r="3"></circle></svg>`,
+  category:`<svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"></path><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"></circle></svg>`,
+  ungroup:`<svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M3 9h18"></path><path d="M3 15h18"></path><path d="M9 3v18"></path><path d="M15 3v18"></path></svg>`,
+  euro:`<svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10h12"></path><path d="M4 14h9"></path><path d="M19 6a7.7 7.7 0 0 0-5.2-2A7.9 7.9 0 0 0 6 12c0 4.4 3.5 8 7.8 8 2 0 3.8-.8 5.2-2"></path></svg>`,
+  arrowUp:`<svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 7-7 7 7"></path><path d="M12 19V5"></path></svg>`,
+  arrowDown:`<svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"></path><path d="m19 12-7 7-7-7"></path></svg>`
+};
+
+groupBtn.innerHTML=ICONS.location;
+
 function parsePriceVal(str){
   const cleaned=String(str).replace(/VB/i,'').replace(/€/g,'').replace(/\u00a0/g,'').trim();
   if(cleaned==='') return 0;
@@ -158,7 +169,7 @@ function formatPriceInput(el){
 }
 
 function updateSortButtons(){
-  sortPriceBtn.textContent='€'+(sortField==='price'?(sortDir===1?'↑':'↓'):'');
+  sortPriceBtn.innerHTML=ICONS.euro+(sortField==='price'?(sortDir===1?ICONS.arrowUp:ICONS.arrowDown):'');
 }
 
 function renderResults(){
@@ -212,13 +223,13 @@ sortPriceBtn.addEventListener('click',()=>{
 groupBtn.addEventListener('click',()=>{
   groupMode=(groupMode+1)%3;
   if(groupMode===GROUP_NONE){
-    groupBtn.textContent='📍';
+    groupBtn.innerHTML=ICONS.location;
     groupBtn.title='Nach Ort gruppieren';
   }else if(groupMode===GROUP_LOCATION){
-    groupBtn.textContent='🗂️';
+    groupBtn.innerHTML=ICONS.category;
     groupBtn.title='Nach Kategorie gruppieren';
   }else{
-    groupBtn.textContent='🖼️';
+    groupBtn.innerHTML=ICONS.ungroup;
     groupBtn.title='Gruppierung aufheben';
   }
   highlightCluster(null);
@@ -248,7 +259,7 @@ $("#btnReset").addEventListener('click', () => {
   if(routeLayer){ map.removeLayer(routeLayer); routeLayer=null; }
   clearResults();
   groupMode=GROUP_NONE;
-  groupBtn.textContent='📍';
+  groupBtn.innerHTML=ICONS.location;
   groupBtn.title='Nach Ort gruppieren';
   sortField='price';
   sortDir=1;
