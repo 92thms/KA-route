@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="de">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>klanavo</title>
+<link rel="icon" type="image/png" href="favico.png">
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+<link rel="stylesheet" href="route.css">
+
+<body>
+<div class="app-header">
+  <h1><img src="klanavo.png" alt="klanavo" class="logo"> klanavo</h1>
+  <p>Plane eine Route und entdecke Kleinanzeigen Inserate entlang der Strecke</br> Kontakt / Feedback / Probleme bitte über Telegram <a href="https://t.me/+MZ4FoLzpqDlkNWYy" target="_blank" rel="noopener" title="Telegram">
+    <svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true" fill="currentColor">
+      <path d="M9.04 15.56 8.86 21c.4 0 .58-.17.8-.38l3.3-3.16 6.84 5.02c1.25.69 2.16.33 2.5-1.16L24 3.6 24 .74c-.38-.97-1.38-.68-2.3-.34L1.32 9.5c-1 .4-.99.95-.18 1.2l6.35 1.98 14.7-9.28-13.15 12.16z"/>
+    </svg>
+  </a></p>
+</div>
+<div id="maintenance" class="hidden">
+  <p>Sorry, Wartungsarbeiten (bin am rumfpuschen)</p>
+  <input id="maintenanceKey" type="password" placeholder="Zugangsschlüssel">
+  <button id="btnMaintenance">Weiter</button>
+</div>
+
+<div id="app" class="hidden">
+
+<header>
+  <div class="group suggest" id="grpStart">
+    <label for="start">Start</label>
+    <input id="start" placeholder="Adresse/Ort eingeben" autocomplete="off">
+    <ul id="start-suggest" hidden></ul>
+  </div>
+  <div class="group suggest" id="grpZiel">
+    <label for="ziel">Ziel</label>
+    <input id="ziel" placeholder="Adresse/Ort eingeben" autocomplete="off">
+    <ul id="ziel-suggest" hidden></ul>
+  </div>
+  <div class="group" id="grpQuery">
+    <label for="query">Suchbegriff</label>
+    <input id="query" placeholder="Suchbegriff" required>
+    <div id="queryWarn" class="warn hidden">Bitte Suchbegriff eingeben.</div>
+  </div>
+  <div class="group" id="grpSettings">
+    <details>
+      <summary><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="icon"><path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"></path><circle cx="12" cy="12" r="3"></circle></svg> Einstellungen <span class="muted">– coming soon</span></summary>
+      <div class="hidden">
+        <label for="radius" title="Umkreis der Suche">Suchradius: <span id="radiusVal"></span> km</label>
+        <input id="radius" type="range" min="0" max="2" step="1" value="1" list="radiusTicks" title="Umkreis der Suche">
+        <datalist id="radiusTicks">
+          <option value="0" label="5"></option>
+          <option value="1" label="10"></option>
+          <option value="2" label="20"></option>
+        </datalist>
+        <label for="step" title="Abstand zwischen Wegpunkten">Punktabstand: <span id="stepVal"></span> km</label>
+        <input id="step" type="range" min="0" max="2" step="1" value="1" list="stepTicks" title="Abstand zwischen Wegpunkten">
+        <datalist id="stepTicks">
+          <option value="0" label="5"></option>
+          <option value="1" label="10"></option>
+          <option value="2" label="20"></option>
+        </datalist>
+      </div>
+    </details>
+  </div>
+  <div class="group" id="grpRun">
+    <label>&nbsp;</label>
+    <button id="btnRun">Route berechnen &amp; suchen</button>
+  </div>
+  <div class="group hidden" id="grpReset">
+    <label>&nbsp;</label>
+    <button id="btnReset">Neustart</button>
+  </div>
+</header>
+
+<div id="map-box" class="hidden">
+  <div id="map-progress"><div id="progressBar" class="bar"></div><span id="progressText" class="pct">0%</span></div>
+  <div id="map"></div>
+</div>
+
+<div id="panel">
+  <div id="results" class="hidden">
+    <div class="results-header"><strong>Ergebnisliste</strong></div>
+    <div id="resultsControls">
+      <div class="price-range">
+        <label for="filterPriceMin">Preisfilter</label>
+        <div class="range-inputs">
+          <input id="filterPriceMin" type="text" placeholder="von">
+          <input id="filterPriceMax" type="text" placeholder="bis">
+        </div>
+      </div>
+      <div class="sort-icons">
+        <div class="sort-label">Gruppieren / Sortieren</div>
+        <div class="icon-buttons">
+          <button id="toggleGrouping" title="Nach Ort gruppieren"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="icon"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"></path><circle cx="12" cy="10" r="3"></circle></svg></button>
+          <button id="sortPrice" data-dir="asc" title="Nach Preis sortieren"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="icon"><path d="M4 10h12"></path><path d="M4 14h9"></path><path d="M19 6a7.7 7.7 0 0 0-5.2-2A7.9 7.9 0 0 0 6 12c0 4.4 3.5 8 7.8 8 2 0 3.8-.8 5.2-2"></path></svg><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="icon"><path d="m5 12 7-7 7 7"></path><path d="M12 19V5"></path></svg></button>
+        </div>
+      </div>
+    </div>
+    <div id="resultGallery" class="gallery"></div>
+  </div>
+</div>
+
+</div> <!-- end app -->
+
+<div id="analytics" class="analytics muted"></div>
+
+<footer class="app-footer">
+  <a href="https://github.com/92thms/ka-route" target="_blank" rel="noopener" title="GitHub">
+    <svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true" fill="currentColor">
+      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+    </svg>
+  </a>
+  <a href="https://t.me/+MZ4FoLzpqDlkNWYy" target="_blank" rel="noopener" title="Telegram">
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="currentColor">
+      <path d="M9.04 15.56 8.86 21c.4 0 .58-.17.8-.38l3.3-3.16 6.84 5.02c1.25.69 2.16.33 2.5-1.16L24 3.6 24 .74c-.38-.97-1.38-.68-2.3-.34L1.32 9.5c-1 .4-.99.95-.18 1.2l6.35 1.98 14.7-9.28-13.15 12.16z"/>
+    </svg>
+  </a>
+</footer>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="config.js"></script>
+<script src="route.js"></script>
+
+</body>
+</html>
