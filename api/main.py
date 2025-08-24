@@ -15,6 +15,9 @@ from pydantic import BaseModel
 import inspect
 
 import os
+import socket
+import ipaddress
+from urllib.parse import urlparse
 
 from fastapi import FastAPI, HTTPException, Request, Response
 import httpx
@@ -47,6 +50,14 @@ _plz_cache: dict[str, str | None] = {}
 
 # Simple analytics storage; allow custom path via env variable
 _STATS_FILE = Path(os.environ.get("STATS_FILE", "/data/stats.json"))
+
+
+def _get_allowed_hosts() -> set[str]:
+    hosts = os.getenv(
+        "PROXY_ALLOW_HOSTS",
+        "nominatim.openstreetmap.org,www.kleinanzeigen.de",
+    )
+    return {h.strip().lower() for h in hosts.split(",") if h.strip()}
 
 
 def _load_stats() -> dict[str, Any]:
@@ -364,6 +375,23 @@ async def proxy(u: str) -> Response:
     bypass CORS restrictions when fetching external resources such as
     Nominatim or individual Kleinanzeigen pages.
     """
+
+    parsed = urlparse(u)
+    if parsed.scheme not in {"http", "https"}:
+        raise HTTPException(status_code=403, detail="invalid scheme")
+    host = parsed.hostname
+    if host is None or host.lower() not in _get_allowed_hosts():
+        raise HTTPException(status_code=403, detail="host not allowed")
+
+    try:
+        for info in socket.getaddrinfo(host, None):
+            ip = ipaddress.ip_address(info[4][0])
+            if ip.is_private or ip.is_loopback:
+                raise HTTPException(status_code=403, detail="invalid ip")
+    except HTTPException:
+        raise
+    except Exception as exc:  # pragma: no cover - DNS failure
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     headers = {
         "User-Agent": (
