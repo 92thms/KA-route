@@ -11,11 +11,9 @@ RUN apt-get update \
 # Arbeitsverzeichnis
 WORKDIR /app
 
-# Upstream-API (Kleinanzeigen-Scraper) dynamisch nachziehen
+# API-Code inklusive Kleinanzeigen-Scraper
 COPY api /app/api
 WORKDIR /app/api
-RUN rm -rf ebay-kleinanzeigen-api && \
-    git clone --depth=1 https://github.com/DanielWTE/ebay-kleinanzeigen-api.git ebay-kleinanzeigen-api
 
 # Python-Abhängigkeiten der API (falls vorhanden)
 RUN if [ -f requirements.txt ]; then \
