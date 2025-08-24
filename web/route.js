@@ -50,7 +50,7 @@ const resultMarkers = L.layerGroup().addTo(map);
 // Shorthands
 const $=sel=>document.querySelector(sel);
 const startGroup=$("#grpStart"), zielGroup=$("#grpZiel"), queryGroup=$("#grpQuery"), settingsGroup=$("#grpSettings"), runGroup=$("#grpRun"), resetGroup=$("#grpReset"), mapBox=$("#map-box"), resultsBox=$("#results"), resultGallery=$("#resultGallery");
-const radiusInput=$("#radius"), stepInput=$("#step"), radiusVal=$("#radiusVal"), stepVal=$("#stepVal"), rateLimitInfo=$("#rateLimitInfo"), filterPriceMin=$("#filterPriceMin"), filterPriceMax=$("#filterPriceMax"), sortPriceBtn=$("#sortPrice"), groupBtn=$("#toggleGrouping");
+const radiusInput=$("#radius"), stepInput=$("#step"), radiusVal=$("#radiusVal"), stepVal=$("#stepVal"), filterPriceMin=$("#filterPriceMin"), filterPriceMax=$("#filterPriceMax"), sortPriceBtn=$("#sortPrice"), groupBtn=$("#toggleGrouping"), analyticsBox=$("#analytics");
 const queryWarn=$("#queryWarn");
 const radiusIdx=radiusOptions.indexOf(rKm);
 radiusInput.value=radiusIdx>=0?radiusIdx:1;
@@ -62,22 +62,41 @@ radiusInput.addEventListener('input',()=>radiusVal.textContent=radiusOptions[rad
 stepInput.addEventListener('input',()=>stepVal.textContent=stepOptions[stepInput.value]);
 $("#query").addEventListener('input',()=>queryWarn.classList.add('hidden'));
 
-async function updateRateLimitInfo(){
+async function fetchRateLimits(){
     try{
-      const res=await fetch(`/ors/geocode/autocomplete?text=Berlin&boundary.country=DE&size=1`,{headers:{"Accept":"application/json"}});
-      const limit=res.headers.get("x-ratelimit-limit");
-      const remain=res.headers.get("x-ratelimit-remaining");
-      if(limit&&remain){
-        rateLimitInfo.textContent=`Rate Limit: ${remain}/${limit}`;
-      }else{
-        rateLimitInfo.textContent="";
-      }
-    }catch(err){
-      rateLimitInfo.textContent="Rate Limit nicht verfügbar";
+      const [geoRes,dirRes]=await Promise.all([
+        fetch(`/ors/geocode/autocomplete?text=Berlin&boundary.country=DE&size=1`,{headers:{"Accept":"application/json"}}),
+        fetch(`/ors/v2/directions/driving-car?start=8.681495,49.41461&end=8.687872,49.420318`,{headers:{"Accept":"application/json"}})
+      ]);
+      return{
+        geocode:{limit:geoRes.headers.get("x-ratelimit-limit"),remaining:geoRes.headers.get("x-ratelimit-remaining")},
+        directions:{limit:dirRes.headers.get("x-ratelimit-limit"),remaining:dirRes.headers.get("x-ratelimit-remaining")}
+      };
+    }catch(_){
+      return{};
     }
   }
 
-  updateRateLimitInfo();
+  async function updateAnalytics(){
+    try{
+      const [stats,limits]=await Promise.all([
+        fetch('/api/stats').then(r=>r.json()).catch(()=>({})),
+        fetchRateLimits()
+      ]);
+      const parts=[];
+      if(stats.searches_saved!=null) parts.push(`eingesparte Suchen: ${stats.searches_saved}`);
+      if(stats.listings_found!=null) parts.push(`Inserate: ${stats.listings_found}`);
+      if(stats.visitors!=null) parts.push(`Besucher: ${stats.visitors}`);
+      if(limits.geocode&&limits.geocode.limit&&limits.geocode.remaining&&limits.directions&&limits.directions.limit&&limits.directions.remaining){
+        parts.push(`API-Limits Geocode ${limits.geocode.remaining}/${limits.geocode.limit}, Directions ${limits.directions.remaining}/${limits.directions.limit}`);
+      }
+      analyticsBox.textContent=parts.join(' · ');
+    }catch(_){
+      analyticsBox.textContent='';
+    }
+  }
+
+  updateAnalytics();
 
 // Kategorien werden direkt aus dem Inserat geparst, daher keine Vorab-Liste nötig
 // Progress-Helfer
@@ -775,6 +794,7 @@ async function run(){
     }
   }
   running=false; $("#btnRun").textContent="Route berechnen & suchen"; abortCtrl=null;
+  updateAnalytics();
 }
 
 
