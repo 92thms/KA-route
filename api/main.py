@@ -230,6 +230,7 @@ async def _reverse_plz(client: httpx.AsyncClient, api_key: str, lat: float, lon:
 
 
 @app.post("/route-search")
+@app.post("/api/route-search")
 async def route_search(req: RouteSearchRequest) -> dict:
     if browser_manager is None:  # pragma: no cover - should not happen
         raise HTTPException(status_code=503, detail="Browser not initialised")

@@ -198,7 +198,6 @@ $("#btnReset").addEventListener('click', () => {
   setProgressState(null,"0%");
 });
 
-$("#btnClear").addEventListener('click', clearInputFields);
 
 // -------- Debounce --------
 function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};}
@@ -509,6 +508,19 @@ $("#btnRun").addEventListener("click",()=>{
 });
 
 async function run(){
+  const q=$("#query").value.trim();
+  const startText=$("#start").value.trim();
+  const zielText=$("#ziel").value.trim();
+  const minPriceRaw=priceMinInput.value.trim();
+  const maxPriceRaw=priceMaxInput.value.trim();
+  const minPrice=minPriceRaw===""?null:Number(minPriceRaw);
+  const maxPrice=maxPriceRaw===""?null:Number(maxPriceRaw);
+  rKm = radiusOptions[Number(radiusInput.value)] || rKm;
+  stepKm = stepOptions[Number(stepInput.value)] || stepKm;
+  if(!startText || !zielText){
+    setStatus("Bitte Start und Ziel eingeben.", true);
+    return;
+  }
   const myRun=++runCounter;
   abortCtrl=new AbortController();
   running=true; $("#btnRun").textContent="Abbrechen";
@@ -524,16 +536,6 @@ async function run(){
   setProgressState("active");
   setProgress(0);
 
-  const q=$("#query").value.trim();
-  const startText=$("#start").value.trim();
-  const zielText=$("#ziel").value.trim();
-  const minPriceRaw=priceMinInput.value.trim();
-  const maxPriceRaw=priceMaxInput.value.trim();
-  const minPrice=minPriceRaw===""?null:Number(minPriceRaw);
-  const maxPrice=maxPriceRaw===""?null:Number(maxPriceRaw);
-  rKm = radiusOptions[Number(radiusInput.value)] || rKm;
-  stepKm = stepOptions[Number(stepInput.value)] || stepKm;
-
   try{
     const resp=await fetch('/api/route-search',{
       method:'POST',
@@ -541,8 +543,13 @@ async function run(){
       body:JSON.stringify({start:startText, ziel:zielText, query:q, radius:rKm, step:stepKm, min_price:minPrice, max_price:maxPrice}),
       signal:abortCtrl.signal
     });
-    if(!resp.ok) throw new Error(`HTTP ${resp.status}`);
-    const data=await resp.json();
+    let data=null;
+    try{ data=await resp.json(); }catch(_){ }
+    if(!resp.ok){
+      const detail=data && data.detail ? `: ${data.detail}` : '';
+      throw new Error(`HTTP ${resp.status}${detail}`);
+    }
+    data=data||{};
     const coords=data.route||[];
     if(routeLayer) map.removeLayer(routeLayer);
     if(coords.length){
